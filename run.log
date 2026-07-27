@@ -1,0 +1,10 @@
+Jul 27, 2026 2:04:10 PM me.friwi.jcefmaven.impl.progress.ConsoleProgressHandler handleProgress
+INFO: LOCATING |> In progress...
+Jul 27, 2026 2:04:10 PM me.friwi.jcefmaven.impl.progress.ConsoleProgressHandler handleProgress
+INFO: INITIALIZING |> In progress...
+Jul 27, 2026 2:04:10 PM me.friwi.jcefmaven.impl.progress.ConsoleProgressHandler handleProgress
+INFO: INITIALIZED |> In progress...
+initialize on Thread[#34,AWT-EventQueue-0,6,main] with library path C:\Users\kensm\Documents\GitHub\Circlepack\jcef-bundle
+[14720:34404:0727/140410.740:ERROR:chrome\installer\util\google_update_settings.cc:265] Failed opening key Software\Chromium to set usagestats; result: 5
+CirclePack started
+

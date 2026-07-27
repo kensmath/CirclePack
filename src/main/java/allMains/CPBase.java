@@ -209,6 +209,19 @@ public abstract class CPBase {
 	        try {
 	            CefAppBuilder builder = new CefAppBuilder();
 	            builder.getCefSettings().windowless_rendering_enabled = false;
+
+	            // Without this, CEF falls back to a shared, per-machine default
+	            // cache location and prints "Please customize
+	            // CefSettings.root_cache_path ... default value may lead to
+	            // unintended process singleton behavior" - i.e. it can decide
+	            // a differently-launched instance of this same app (or any
+	            // other jcef-based app using the same default) is already
+	            // running and defer to it instead of starting normally. Giving
+	            // each install/user its own cache directory under their home
+	            // folder avoids that collision.
+	            File cacheDir = new File(System.getProperty("user.home"), ".circlepack/cef-cache");
+	            builder.getCefSettings().root_cache_path = cacheDir.getAbsolutePath();
+
 	            cefApp = builder.build();
 	        } catch (IOException | InterruptedException | UnsupportedPlatformException | CefInitializationException e) {
 	            throw new RuntimeException("Failed to initialize embedded browser engine", e);

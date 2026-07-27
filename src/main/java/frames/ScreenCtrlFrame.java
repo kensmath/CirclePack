@@ -20,12 +20,13 @@ import panels.ScreenShotPanel;
 import panels.ScreenPanel;
 
 /**
- * This is the tabbed panel with various info on packing, screen settings,
- * lists, etc., initiated on startup. The pack[]'s keep their info, so on change
- * of active packing, have to establish the various values; changes then only
- * affect the active packing.
+ * This is the tabbed panel with various info on 
+ * packing, screen settings, lists, etc., initiated 
+ * on startup. The pack[]'s keep their info, so on 
+ * change of active packing, have to establish the 
+ * various values; changes then only affect the active 
+ * packing.
  */
-
 public class ScreenCtrlFrame extends JFrame implements ActionListener {
 
 	private static final long 

@@ -94,7 +94,8 @@ public class HoverPanel extends JPanel implements MouseListener {
 	public void initComponents() {}
 	
 	/**
-	 * Call for initial formating of 'this' panel (may depend on locked state)
+	 * Call for initial formating of 'this' panel 
+	 * (may depend on locked state)
 	 */
 	public void setInitPanel() {
 		loadHover();
@@ -135,7 +136,8 @@ public class HoverPanel extends JPanel implements MouseListener {
 	}
 	
 	/**
-	 * Is the frame locked? (i.e., visible (or iconified) and decorated)
+	 * Is the frame locked? (i.e., visible (or iconified) 
+	 * and decorated)
 	 * @return
 	 */
 	public boolean isLocked() {
@@ -143,7 +145,8 @@ public class HoverPanel extends JPanel implements MouseListener {
 	}
 	
 	/**
-	 * For calling from other thread (where 'this' means the thread)
+	 * For calling from other thread (where 'this' 
+	 * means the thread)
 	 * @param jF
 	 */
 	public void addThis(JFrame jF) {
@@ -185,8 +188,9 @@ public class HoverPanel extends JPanel implements MouseListener {
 
 	public void mouseEntered(MouseEvent me) {
 	
-/* TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020
-         final Point pt=setXY(me);
+/* TODO: Need method to disable: I'm getting deep 
+ * error of some sort as of 6/2020
+        final Point pt=setXY(me);
 			
         // create a new thread
         appearSleeper = new Thread(new Runnable() {
@@ -228,7 +232,8 @@ public class HoverPanel extends JPanel implements MouseListener {
 	
 	public void mouseExited(MouseEvent me) {
 		
-/*  TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020		
+/*  TODO: Need method to disable: I'm getting deep 
+ *  error of some sort as of 6/2020		
 		// if mouse leaves the parent component
 		// (no need to run this code if frame is locked)
 		appearSleeper.interrupt();
@@ -272,7 +277,8 @@ public class HoverPanel extends JPanel implements MouseListener {
 	
 /*	
 	private boolean isMouseInHover() {
-  TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020				// return true if mouse is in hoverFrame, false otherwise
+  TODO: Need method to disable: I'm getting deep 
+  error of some sort as of 6/2020				// return true if mouse is in hoverFrame, false otherwise
 		int curX = (int) MouseInfo.getPointerInfo().getLocation().x;
 		int curY = (int) MouseInfo.getPointerInfo().getLocation().y;
 

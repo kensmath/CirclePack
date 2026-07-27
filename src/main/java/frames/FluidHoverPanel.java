@@ -15,15 +15,17 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 /**
- * The FluidHoverPanel component is a container class that initially appears
- * as a tool tip for its parent component, but locks into a standard frame
- * when moused over. If the frame is currently locked, mousing over the
- * parent component will restore and focus on the frame. This class is
- * intended to be instantiated around a parent component and treated as a
+ * The FluidHoverPanel component is a container class 
+ * that initially appears as a tool tip for its parent 
+ * component, but locks into a standard frame
+ * when moused over. If the frame is currently locked, 
+ * mousing over the parent component will restore and 
+ * focus on the frame. This class is intended to be 
+ * instantiated around a parent component and treated as a
  * standard JPanel for containing and displaying components.
  * 
- * The FluidHoverPanel is a re-implementation of the standard HoverPanel
- * that is able to fluidly resize.
+ * The FluidHoverPanel is a re-implementation of the 
+ * standard HoverPanel that is able to fluidly resize.
  * 
  * @author kens
  * @author Alex Fawkes
@@ -60,8 +62,9 @@ public class FluidHoverPanel extends JPanel {
 	protected final FluidHoverPanel currentInstance = this; // For referencing from threads and subclasses.
 
 	/**
-	 * The FluidHoverPanel must be constructed with a reference to its parent
-	 * component. Do not use this constructor.
+	 * The FluidHoverPanel must be constructed with a 
+	 * reference to its parent component. Do not 
+	 * use this constructor.
 	 */
 	@SuppressWarnings("unused")
 	private FluidHoverPanel() {}

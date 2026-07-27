@@ -62,12 +62,11 @@ import packing.PackData;
 import packing.ReadWrite;
 
 /**
- * A CirclePack browser window — one of these per open browser panel. Tabs
- * within the window share ONE CefClient/CefApp (this is CEF's normal
- * supported pattern for multi-browser-per-client apps — every callback
- * hands back the specific CefBrowser it's about to for, which is how the
- * handlers below tell tabs apart); the shared CefApp singleton itself
- * lives in CefAppHolder and is NOT created or disposed from this class.
+ * A CirclePack browser: based on CEF project to get
+ * full functioning browser. Tabs share ONE 
+ * CefClient/CefApp, the shared CefApp singleton itself
+ * lives in CefAppHolder and is NOT created or disposed 
+ * from this class.
  *
  * Layout (top to bottom):
  *   - window title (tracks the ACTIVE tab's page title)
@@ -81,24 +80,21 @@ import packing.ReadWrite;
  *   - tab strip + the active tab's CEF browser display area (JTabbedPane)
  *   - status bar: read-only field echoing the URL of whatever link the
  *     cursor is currently hovering over in the active tab (blank otherwise)
- *
- * Drop this in next to CirclePack's other *Frame window classes and adapt
- * to whatever base class / windowing convention they use (this sketch
- * extends JFrame directly for clarity).
  */
 public class BrowserFrame extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	private static final String DEFAULT_TITLE = "CirclePack Browser";
 
-	// Extensions that get handed off to CirclePack's own loading machinery
-	// instead of being displayed as a web page (see ScriptPackingRequestHandler,
-	// below). Matched case-insensitively against the URL's path only (query
-	// string / fragment, if any, are ignored).
+	// There are certain extensions that get handed 
+	//   off to CirclePack loading machinery instead of being 
+	//   displayed; see ScriptPackingRequestHandler.
+	// Matched case-insensitively against the URL's path only 
+	//   (query string / fragment, if any, are ignored).
 	private static final String[] SCRIPT_EXTENSIONS = {".cps", ".xmd", ".cmd"};
 	private static final String[] PACKING_EXTENSIONS = {".p", ".q"};
 
-    private final CefClient client; // shared by every tab in this window
+    private final CefClient client; // shared by every tab
     private final String homeUrl;   // what a new tab opens to
     private boolean browserClosed = false;
 
@@ -107,7 +103,10 @@ public class BrowserFrame extends JFrame {
     private JTabbedPane tabs;
     private BrowserTab activeTab; // kept in sync with tabs.getSelectedIndex()
 
-    /** Everything genuinely per-tab: its own CefBrowser (with its own navigation history), display component, and tab-strip label. */
+    /** Everything genuinely per-tab: its own CefBrowser 
+     * (with its own navigation history), display component, 
+     * and tab-strip label. 
+    */
     private class BrowserTab {
         final CefBrowser browser;
         final Component ui;
@@ -162,7 +161,7 @@ public class BrowserFrame extends JFrame {
         // action — when you actually want to release the underlying
         // browser permanently.
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        setSize(900, 650);
+        setSize(620, 450);
         getContentPane().setLayout(new BorderLayout());
 
         tabs = new JTabbedPane();
@@ -198,10 +197,7 @@ public class BrowserFrame extends JFrame {
 
     /**
      * Closes tab. Closing the WINDOW's only remaining tab is treated the
-     * same as clicking the window's own X — it just hides the window
-     * (see the HIDE_ON_CLOSE comment in the constructor) rather than
-     * leaving a tab-less, useless window or destroying CEF resources that
-     * closeBrowser() alone should be responsible for tearing down.
+     * same as clicking the window's own X — it just hides the window.
      *
      * Bookkeeping (openTabs/tabs) is updated BEFORE the underlying
      * browser.close(true) call so that tabFor() immediately stops
@@ -221,7 +217,9 @@ public class BrowserFrame extends JFrame {
         tab.browser.close(true);
     }
 
-    /** The standard "JLabel + close JButton" custom tab-strip header (see e.g. the Java Tutorial's closable-tabs pattern). */
+    /** The standard "JLabel + close JButton" custom tab-strip header 
+     * (see e.g. the Java Tutorial's closable-tabs pattern). 
+    */
     private Component buildTabHeader(BrowserTab tab) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         panel.setOpaque(false);
@@ -248,7 +246,9 @@ public class BrowserFrame extends JFrame {
         return title.length() > 24 ? title.substring(0, 22) + "…" : title;
     }
 
-    /** Finds which tab a CefBrowser from a handler callback belongs to, or null if it's already been closed. */
+    /** Finds which tab a CefBrowser from a handler callback belongs 
+     * to, or null if it's already been closed.
+    */
     private BrowserTab tabFor(CefBrowser browser) {
         for (BrowserTab t : openTabs) {
             if (t.browser == browser) return t;
@@ -256,7 +256,9 @@ public class BrowserFrame extends JFrame {
         return null;
     }
 
-    /** Called whenever the selected tab changes (tab click, or programmatically from openTab()/closeTab()). */
+    /** Called whenever the selected tab changes (tab click, 
+     * or programmatically from openTab()/closeTab()). 
+    */
     private void onActiveTabChanged() {
         int idx = tabs.getSelectedIndex();
         if (idx < 0 || idx >= openTabs.size()) {
@@ -267,7 +269,10 @@ public class BrowserFrame extends JFrame {
         refreshToolbarForActiveTab();
     }
 
-    /** Re-syncs the shared toolbar (nav buttons, address bar, window title) to whatever the active tab is currently showing. */
+    /** Re-syncs the shared toolbar (nav buttons, address bar, 
+     * window title) to whatever the active tab is currently 
+     * showing.
+    */
     private void refreshToolbarForActiveTab() {
         if (activeTab == null) return;
         backButton.setEnabled(activeTab.browser.canGoBack());
@@ -278,9 +283,9 @@ public class BrowserFrame extends JFrame {
     }
 
     /**
-     * Builds the toolbar: nav + new-tab buttons on the left, address combo
-     * box (with its built-in dropdown arrow doubling as a history picker)
-     * filling the rest of the row.
+     * Builds the toolbar: nav + new-tab buttons on the left, 
+     * address combo box (with its built-in dropdown arrow doubling 
+     * as a history picker) filling the rest of the row.
      */
     private JPanel buildToolBar() {
         JPanel toolBar = new JPanel(new BorderLayout(4, 0));
@@ -445,7 +450,10 @@ public class BrowserFrame extends JFrame {
         }
     }
 
-    /** Makes the visible address bar show the active tab's current URL (guarded so this sync itself doesn't look like a user pick). */
+    /** Makes the visible address bar show the active tab's 
+     * current URL (guarded so this sync itself doesn't 
+     * look like a user pick). 
+     */
     private void syncAddressBarToActiveTab() {
         if (activeTab == null) return;
         updatingAddressBar = true;
@@ -458,16 +466,18 @@ public class BrowserFrame extends JFrame {
     }
 
     /**
-     * Installs a classic Emacs / GNU-readline single-line editing keymap
-     * on the address field, layered on top of the platform defaults
-     * rather than replacing them (Home/End/arrow keys etc. still work).
-     * Movement and simple deletion are wired to the field's own
-     * DefaultEditorKit actions; kill/yank/transpose/history/abort are
-     * small custom actions below, backed by a one-slot kill buffer (not
-     * a full multi-entry kill ring). Note this deliberately overrides a
-     * couple of platform conventions that collide with Emacs bindings —
-     * e.g. Ctrl+A is "beginning of line" here, not "select all" — since
-     * that collision is the whole point of asking for Emacs bindings.
+     * Installs a classic Emacs / GNU-readline single-line editing 
+     * keymap on the address field, layered on top of the platform 
+     * defaults rather than replacing them (Home/End/arrow keys etc. 
+     * still work). Movement and simple deletion are wired to the 
+     * field's own DefaultEditorKit actions; kill/yank/transpose/
+     * history/abort are small custom actions below, backed by a 
+     * one-slot kill buffer (not a full multi-entry kill ring). 
+     * Note this deliberately overrides a couple of platform 
+     * conventions that collide with Emacs bindings — e.g. Ctrl+A 
+     * is "beginning of line" here, not "select all" — since
+     * that collision is the whole point of asking for Emacs 
+     * bindings.
      */
     private void installEmacsKeyBindings(JTextField field) {
         InputMap im = field.getInputMap(JComponent.WHEN_FOCUSED);
@@ -517,7 +527,9 @@ public class BrowserFrame extends JFrame {
         im.put(KeyStroke.getKeyStroke(keyCode, modifiers), actionKey);
     }
 
-    /** Ctrl+K: delete from caret to end of line, saving the killed text. */
+    /** Ctrl+K: delete from caret to end of line, saving the 
+     * killed text. 
+     */
     private Action killLineAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -533,7 +545,9 @@ public class BrowserFrame extends JFrame {
         };
     }
 
-    /** Ctrl+U: delete from start of line to caret (readline unix-line-discard), saving the killed text. */
+    /** Ctrl+U: delete from start of line to caret (readline 
+     * unix-line-discard), saving the killed text. 
+     */
     private Action killToBeginningAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -549,7 +563,9 @@ public class BrowserFrame extends JFrame {
         };
     }
 
-    /** Ctrl+W: delete the word before the caret, saving the killed text. */
+    /** Ctrl+W: delete the word before the caret, saving the 
+     * killed text. 
+     */
     private Action killWordBackAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -643,7 +659,9 @@ public class BrowserFrame extends JFrame {
         };
     }
 
-    /** Ctrl+G: abandon in-progress edits and revert to the active tab's currently loaded URL. */
+    /** Ctrl+G: abandon in-progress edits and revert to the 
+     * active tab's currently loaded URL. 
+     */
     private Action abortEditAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -704,7 +722,11 @@ public class BrowserFrame extends JFrame {
         }
     }
 
-    /** Keeps the back/forward/reload buttons in sync with the ACTIVE tab's real browser history — every tab's own load state is tracked internally by its CefBrowser regardless. */
+    /** Keeps the back/forward/reload buttons in sync with 
+     * the ACTIVE tab's real browser history — every tab's own 
+     * load state is tracked internally by its CefBrowser 
+     * regardless. 
+     */
     private class BrowserLoadHandler extends CefLoadHandlerAdapter {
         @Override
         public void onLoadingStateChange(CefBrowser browser, boolean isLoading,
@@ -769,7 +791,10 @@ public class BrowserFrame extends JFrame {
         }
     }
 
-    /** The URL's path, with any query string or fragment stripped off — same slice the old code got from URL.getFile(). */
+    /** The URL's path, with any query string or fragment 
+     * stripped off — same slice the old code got from 
+     * URL.getFile(). 
+     */
     private static String pathOnly(String url) {
         int end = url.length();
         int q = url.indexOf('?');
@@ -835,7 +860,10 @@ public class BrowserFrame extends JFrame {
         }).start();
     }
 
-    /** Loads a script already sitting at a local path (readPath) into CirclePack, labelling it with labelUrl (the true, possibly-remote, location). Must run on the EDT. */
+    /** Loads a script already sitting at a local path 
+     * (readPath) into CirclePack, labeling it with labelUrl (the 
+     * true, possibly-remote, location). Must run on the EDT. 
+     */
     private void loadScriptFile(String readPath, String labelUrl) {
         boolean newScript = CPBase.scriptManager.getScript(readPath, labelUrl, true) > 0;
         if (newScript) {
@@ -890,7 +918,12 @@ public class BrowserFrame extends JFrame {
         });
     }
 
-    /** Reads packing data from reader into the active pack and refreshes the display, mirroring the old load()'s .p/.q handling. Must run on the EDT. path is only consulted for its .p/.q extension (to decide whether to cleanse first) and as a label passed through to readpack(). */
+    /** Reads packing data from reader into the active pack and 
+     * refreshes the display, mirroring the old load()'s .p/.q 
+     * handling. Must run on the EDT. path is only consulted 
+     * for its .p/.q extension (to decide whether to cleanse first)
+     * and as a label passed through to readpack().
+     */
     private void readPackingFile(BufferedReader reader, String path) {
         if (path.toLowerCase().endsWith(".p")) {
             TrafficCenter.cmdGUI("cleanse");

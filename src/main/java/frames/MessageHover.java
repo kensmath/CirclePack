@@ -32,9 +32,7 @@ import input.ShellManager;
  * @author kens, based on sample by Alex Fawkes
  */
  public class MessageHover extends HoverPanel {
-
-		private static final long 
-		serialVersionUID = 1L;
+		private static final long serialVersionUID = 1L;
 		
 		final static int WIDE = 600; 
 		final static int HIGH = 150; 
@@ -49,8 +47,9 @@ import input.ShellManager;
 		public static int cmdNum;
 		public static int histPos;
 		static StringBuffer shellBuffer;
-		static int shellHeadEnd; // keeps track of old end for pruning
-		// display msg in tooltip before a command is entered
+		static int shellHeadEnd; // keeps track of old end 
+		// for pruning display msg in tooltip before a 
+		// command is entered.
 		static String initShellText = "History of commands and messages will be displayed here.\n"; 
 
 		// command strings are kept in 'cmdHistory' for shell up/down action
@@ -146,9 +145,11 @@ import input.ShellManager;
 		}
 		
 		/**
-		 * Arranged like this to try to avoid timing/thread conflicts
+		 * Arranged like this to try to avoid 
+		 * timing/thread conflicts
 		 * 
-		 * TODO: when history gets too long, this may be causing time delays (6/2013)
+		 * TODO: when history gets too long, this may be 
+		 * causing time delays (6/2013)
 		 */
 		public static void updateShellPane() {
 			try {
@@ -164,11 +165,14 @@ import input.ShellManager;
 		}
 		
 		/**
-		 * TODO: Not implemented when 'MsgFrame' window was replaced by 'ShellManager'
+		 * TODO: Not implemented when 'MsgFrame' window 
+		 * was replaced by 'ShellManager'
 		 * 
-		 * When the user clicks on a previous command in the 'historyPane', copy
-		 * that command to the 'MyConsole.cmdline'. TODO: this was copied from
-		 * 'MsgFrame' and not yet adjusted
+		 * When the user clicks on a previous command 
+		 * in the 'historyPane', copy that command to 
+		 * the 'MyConsole.cmdline'. 
+		 * TODO: this was copied from 'MsgFrame' and 
+		 * not yet adjusted
 		 */
 		public void hyperlinkUpdate(HyperlinkEvent evt) {
 			if (evt.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
@@ -197,6 +201,5 @@ import input.ShellManager;
 				shellPane.setToolTipText(null);
 			}
 		}
-
 
 }

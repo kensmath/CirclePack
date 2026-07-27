@@ -5,8 +5,9 @@ import input.CPFileManager;
 import java.io.File;
 
 /** 
- * Class containing info on files included in CPdata portion of scripts.
- * A linked list of these is maintained as 'ScriptManager.includeFiles'.
+ * Class containing info on files included in CPdata 
+ * portion of scripts. A linked list of these is 
+ * maintained as 'ScriptManager.includeFiles'.
  * @author kens
  */
 public class IncludedFile {
