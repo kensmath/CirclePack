@@ -267,6 +267,30 @@ MouseMotionListener,FocusListener {
 			CirclePack.cpb.errMsg("failed to find/create 'myCirclePack/cpprefrc'");
 		}
 
+	    try {
+	        SwingUtilities.invokeAndWait(this::buildPackControlGUI);
+	    } catch (InterruptedException ex) {
+	        Thread.currentThread().interrupt();
+	        CirclePack.cpb.errMsg("Interrupted while building the PackControl GUI.");
+	    } catch (InvocationTargetException ex) {
+	        CirclePack.cpb.errMsg("Failed to build the PackControl GUI: " + ex.getCause());
+	    }
+	}
+
+	/**
+	 * Formerly the tail of initPackControl(). All of it either constructs
+	 * Swing components directly - MainFrame, the three MyConsoles,
+	 * ScriptManager/ScriptBundle/ScriptHover, VertScriptBar, the frame
+	 * buttons, every frame built in startFramesPanels() (including
+	 * MobiusFrame and BrowserFrame), and 'frame' itself - or touches them
+	 * (initGUI(), frame.pack(), resetDisplay()). It used to run on
+	 * CirclePackMain's SwingWorker background thread along with the rest of
+	 * initPackControl(); it's now marshalled onto the EDT as a single
+	 * invokeAndWait call above, still blocking that background thread until
+	 * it completes - so initialization order and the splash's timing are
+	 * unchanged.
+	 */
+	private void buildPackControlGUI() {
 		preferences = new CPPreferences(); // pref stuff set here
 
 		// Create the packing data memory storage areas
@@ -399,7 +423,6 @@ MouseMotionListener,FocusListener {
 		vertScriptBar.scriptTools.add(scriptHover.scriptToolHandler.toolBar);
 		frame.setVisible(false);
 		resetDisplay(-1.0);
-
 	}
 	
 	/**
@@ -617,34 +640,10 @@ MouseMotionListener,FocusListener {
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
 		
-		// TODO: need to add messenger, historyFile,
-		//   also figure out how to catch *.p, *.q, *.cps, etd.
-		//
-		// BrowserFrame embeds a heavyweight, native CEF browser component -
-		// unlike the plain Swing frames around it, constructing (and
-		// showing) it off the EDT is genuinely fragile (see java-cef
-		// issues #42/#297). initPackControl() as a whole still runs on
-		// CirclePackMain's SwingWorker background thread, so this one
-		// construction is explicitly marshalled onto the EDT via
-		// invokeAndWait, which blocks this background thread until it
-		// completes - preserving the existing initialization order
-		// (nothing later in initPackControl() runs before browserFrame
-		// exists, same as before). CPBase.getCefApp() has normally already
-		// been warmed up by this point (see CirclePackMain.doInBackground()),
-		// so this EDT call is just the (comparatively cheap) per-window
-		// browser creation, not CEF's whole native bootstrap.
-		try {
-			SwingUtilities.invokeAndWait(() -> {
-				browserFrame = new BrowserFrame("www.circlepack.com"); // messenger, historyFile);
-				browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
-				browserFrame.setVisible(browserStart); // browserStart=true;
-			});
-		} catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-			CirclePack.cpb.errMsg("Interrupted while creating the browser window.");
-		} catch (InvocationTargetException ex) {
-			CirclePack.cpb.errMsg("Failed to create the browser window: " + ex.getCause());
-		}
+		// BrowserFrame embeds a heavyweight, native CEF browser component.
+		browserFrame = new BrowserFrame("www.circlepack.com"); // messenger, historyFile);
+		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
+		browserFrame.setVisible(browserStart); // browserStart=true;
 		
 		newftnFrame=new FtnFrame();
 		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
