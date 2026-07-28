@@ -10,31 +10,27 @@ import frames.OwlSplashScreen;
 
 /**
  * Single-process entry point for GUI based CirclePack, 
- * using OwlSplashScreen while initiating. Used Claude
- * to help in programming.
+ * using OwlSplashScreen while initiating.
  *
  * As of 7/2026, using Java 17+ (versus previous 1.8).
  */
 public class CirclePackMain {
 
     public static void main(String[] args) {
-        // Parse command-line args up front. These 
-    	// fields (CPBase.directory, CPBase.initialScript, 
-    	// CPBase.socketActive, CPBase.cpSocketPort)
-        // are read later inside startCirclePack(), so 
-    	// they must be set before done() runs below - 
-    	// doing it here, before the splash even shows, 
-    	// guarantees that.
+        // Parse command-line args up front, same logic as
+        // CP_after_Splash.main() used to do. These fields (CPBase.directory,
+        // CPBase.initialScript, CPBase.socketActive, CPBase.cpSocketPort)
+        // are read later inside startCirclePack(), so they must be set
+        // before done() runs below - doing it here, before the splash
+        // even shows, guarantees that.
     	parseArgs(args);
 
         SwingUtilities.invokeLater(() -> {
             OwlSplashScreen splash = new OwlSplashScreen();
-            // Guarantee the splash stays on top even 
-            // though PackControl's real window becomes 
-            // visible (via resetDisplay()) partway through 
-            // the background work below - otherwise the 
-            // OS/window manager could have that window
-            // obscure the splash.
+            // Guarantee the splash stays on top even though PackControl's
+            // real window becomes visible (via resetDisplay()) partway
+            // through the background work below - otherwise the OS/window
+            // manager could bring that window to front over the splash.
 
             splash.setAlwaysOnTop(true);
             splash.setVisible(true);
@@ -42,10 +38,26 @@ public class CirclePackMain {
             SwingWorker<CirclePack, ProgressUpdate> worker = new SwingWorker<>() {
                 @Override
                 protected CirclePack doInBackground() throws Exception {
-                    // PackControl.initPackControl() is one long, 
-                	// uninstrumented block of setup work. 
-                	// Reporting it as "busy" keeps the bar 
-                	// visibly animating.
+                    // Kick off CEF's one-time native bootstrap (the several-
+                    // second "LOCATING / INITIALIZING / INITIALIZED" bundle
+                    // extraction and engine startup) here, off the EDT,
+                    // before anything else touches it. CPBase.getCefApp()
+                    // caches the CefApp it builds, so by the time
+                    // PackControl.initPackControl() constructs BrowserFrame
+                    // a bit later (marshalled onto the EDT via
+                    // invokeAndWait - see PackControl.java), that call just
+                    // returns the already-built CefApp instantly instead of
+                    // blocking the EDT for however long the native bootstrap
+                    // takes.
+                    publish(ProgressUpdate.busy("  Starting embedded browser engine..."));
+                    CPBase.getCefApp();
+
+                    // "new CirclePack(1)" (-> PackControl.initPackControl())
+                    // is one long, uninstrumented block of setup work with
+                    // no natural percentage checkpoints inside it - that's
+                    // the ~12 seconds users actually wait through. Reporting
+                    // it as "busy" keeps the bar visibly animating for that
+                    // whole stretch instead of sitting frozen at 40%.
                     publish(ProgressUpdate.busy("   Starting CirclePack..."));
                     CirclePack circlePack = new CirclePack(1);
                     publish(ProgressUpdate.at("Loading script...", 80));
@@ -110,9 +122,7 @@ public class CirclePackMain {
         }
     }
 
-    /** percent is meaningless (and ignored) when busy 
-     * is true. 
-     */
+    /** percent is meaningless (and ignored) when busy is true. */
     private record ProgressUpdate(String message, int percent, boolean busy) {
         static ProgressUpdate at(String message, int percent) {
             return new ProgressUpdate(message, percent, false);

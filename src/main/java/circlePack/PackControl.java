@@ -20,6 +20,7 @@ import java.awt.geom.Path2D;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.DateFormat;
@@ -30,6 +31,7 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 import allMains.CPBase;
@@ -615,11 +617,34 @@ MouseMotionListener,FocusListener {
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
 		
-		// TODO: need to add messenger, historyFile, 
+		// TODO: need to add messenger, historyFile,
 		//   also figure out how to catch *.p, *.q, *.cps, etd.
-		browserFrame = new BrowserFrame("www.circlepack.com"); // messenger, historyFile);
-		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
-		browserFrame.setVisible(browserStart); // browserStart=true;
+		//
+		// BrowserFrame embeds a heavyweight, native CEF browser component -
+		// unlike the plain Swing frames around it, constructing (and
+		// showing) it off the EDT is genuinely fragile (see java-cef
+		// issues #42/#297). initPackControl() as a whole still runs on
+		// CirclePackMain's SwingWorker background thread, so this one
+		// construction is explicitly marshalled onto the EDT via
+		// invokeAndWait, which blocks this background thread until it
+		// completes - preserving the existing initialization order
+		// (nothing later in initPackControl() runs before browserFrame
+		// exists, same as before). CPBase.getCefApp() has normally already
+		// been warmed up by this point (see CirclePackMain.doInBackground()),
+		// so this EDT call is just the (comparatively cheap) per-window
+		// browser creation, not CEF's whole native bootstrap.
+		try {
+			SwingUtilities.invokeAndWait(() -> {
+				browserFrame = new BrowserFrame("www.circlepack.com"); // messenger, historyFile);
+				browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
+				browserFrame.setVisible(browserStart); // browserStart=true;
+			});
+		} catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			CirclePack.cpb.errMsg("Interrupted while creating the browser window.");
+		} catch (InvocationTargetException ex) {
+			CirclePack.cpb.errMsg("Failed to create the browser window: " + ex.getCause());
+		}
 		
 		newftnFrame=new FtnFrame();
 		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
