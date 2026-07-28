@@ -12,16 +12,19 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -62,11 +65,12 @@ import packing.PackData;
 import packing.ReadWrite;
 
 /**
- * A CirclePack browser: based on CEF project to get
- * full functioning browser. Tabs share ONE 
- * CefClient/CefApp, the shared CefApp singleton itself
- * lives in CefAppHolder and is NOT created or disposed 
- * from this class.
+ * A CirclePack browser window — one of these per open browser panel. Tabs
+ * within the window share ONE CefClient/CefApp (this is CEF's normal
+ * supported pattern for multi-browser-per-client apps — every callback
+ * hands back the specific CefBrowser it's about to for, which is how the
+ * handlers below tell tabs apart); the shared CefApp singleton itself
+ * lives in CefAppHolder and is NOT created or disposed from this class.
  *
  * Layout (top to bottom):
  *   - window title (tracks the ACTIVE tab's page title)
@@ -80,33 +84,44 @@ import packing.ReadWrite;
  *   - tab strip + the active tab's CEF browser display area (JTabbedPane)
  *   - status bar: read-only field echoing the URL of whatever link the
  *     cursor is currently hovering over in the active tab (blank otherwise)
+ *
+ * Drop this in next to CirclePack's other *Frame window classes and adapt
+ * to whatever base class / windowing convention they use (this sketch
+ * extends JFrame directly for clarity).
  */
 public class BrowserFrame extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	private static final String DEFAULT_TITLE = "CirclePack Browser";
 
-	// There are certain extensions that get handed 
-	//   off to CirclePack loading machinery instead of being 
-	//   displayed; see ScriptPackingRequestHandler.
-	// Matched case-insensitively against the URL's path only 
-	//   (query string / fragment, if any, are ignored).
+	// Extensions that get handed off to CirclePack's own loading machinery
+	// instead of being displayed as a web page (see ScriptPackingRequestHandler,
+	// below). Matched case-insensitively against the URL's path only (query
+	// string / fragment, if any, are ignored).
 	private static final String[] SCRIPT_EXTENSIONS = {".cps", ".xmd", ".cmd"};
 	private static final String[] PACKING_EXTENSIONS = {".p", ".q"};
 
-    private final CefClient client; // shared by every tab
+	// Matches the old MemComboBox.MAX_MEM_LEN - how many entries the
+	// persisted "recently visited" list keeps, most recent first.
+	private static final int MAX_HISTORY_ENTRIES = 15;
+
+    private final CefClient client; // shared by every tab in this window
     private final String homeUrl;   // what a new tab opens to
     private boolean browserClosed = false;
+
+    // Where the shared "recently visited" address history is loaded from
+    // at startup and saved to after every visit - CirclePack's
+    // CPBase.WEB_URL_FILE, resolved to an absolute path by the caller
+    // (see PackControl.initPackControl()). Null means "don't persist" -
+    // e.g. for callers that just want a plain, in-memory-only browser.
+    private final File historyFile;
 
     // Tabs
     private final List<BrowserTab> openTabs = new ArrayList<>();
     private JTabbedPane tabs;
     private BrowserTab activeTab; // kept in sync with tabs.getSelectedIndex()
 
-    /** Everything genuinely per-tab: its own CefBrowser 
-     * (with its own navigation history), display component, 
-     * and tab-strip label. 
-    */
+    /** Everything genuinely per-tab: its own CefBrowser (with its own navigation history), display component, and tab-strip label. */
     private class BrowserTab {
         final CefBrowser browser;
         final Component ui;
@@ -136,9 +151,23 @@ public class BrowserFrame extends JFrame {
     // Status bar (echoes hovered link in the active tab, blank when nothing is hovered)
     private JTextField statusBar;
 
+    /** Plain, in-memory-only browser - the address history dropdown starts empty and nothing is persisted. */
     public BrowserFrame(String startUrl) {
+        this(startUrl, null);
+    }
+
+    /**
+     * historyFilePath, if non-null/non-blank, is where the shared
+     * "recently visited" address list is loaded from at construction and
+     * saved to after every visit - CirclePack's CPBase.WEB_URL_FILE
+     * preference (see PackControl.initPackControl(), which resolves it to
+     * an absolute path before passing it in here).
+     */
+    public BrowserFrame(String startUrl, String historyFilePath) {
         super(DEFAULT_TITLE);
         this.homeUrl = startUrl;
+        this.historyFile = (historyFilePath == null || historyFilePath.trim().isEmpty())
+                ? null : new File(historyFilePath.trim());
 
         // One client for the whole window; every tab's CefBrowser is
         // created from it, and its handlers (registered once, below)
@@ -161,12 +190,12 @@ public class BrowserFrame extends JFrame {
         // action — when you actually want to release the underlying
         // browser permanently.
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        setSize(620, 450);
+        setSize(900, 650);
         getContentPane().setLayout(new BorderLayout());
 
         tabs = new JTabbedPane();
 
-        getContentPane().add(buildToolBar(), BorderLayout.NORTH);
+        getContentPane().add(buildToolBar(), BorderLayout.NORTH); // also loads + populates addressHistory from historyFile, if any
         getContentPane().add(tabs, BorderLayout.CENTER);
         getContentPane().add(buildStatusBar(), BorderLayout.SOUTH);
 
@@ -197,7 +226,10 @@ public class BrowserFrame extends JFrame {
 
     /**
      * Closes tab. Closing the WINDOW's only remaining tab is treated the
-     * same as clicking the window's own X — it just hides the window.
+     * same as clicking the window's own X — it just hides the window
+     * (see the HIDE_ON_CLOSE comment in the constructor) rather than
+     * leaving a tab-less, useless window or destroying CEF resources that
+     * closeBrowser() alone should be responsible for tearing down.
      *
      * Bookkeeping (openTabs/tabs) is updated BEFORE the underlying
      * browser.close(true) call so that tabFor() immediately stops
@@ -217,9 +249,7 @@ public class BrowserFrame extends JFrame {
         tab.browser.close(true);
     }
 
-    /** The standard "JLabel + close JButton" custom tab-strip header 
-     * (see e.g. the Java Tutorial's closable-tabs pattern). 
-    */
+    /** The standard "JLabel + close JButton" custom tab-strip header (see e.g. the Java Tutorial's closable-tabs pattern). */
     private Component buildTabHeader(BrowserTab tab) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         panel.setOpaque(false);
@@ -246,9 +276,7 @@ public class BrowserFrame extends JFrame {
         return title.length() > 24 ? title.substring(0, 22) + "…" : title;
     }
 
-    /** Finds which tab a CefBrowser from a handler callback belongs 
-     * to, or null if it's already been closed.
-    */
+    /** Finds which tab a CefBrowser from a handler callback belongs to, or null if it's already been closed. */
     private BrowserTab tabFor(CefBrowser browser) {
         for (BrowserTab t : openTabs) {
             if (t.browser == browser) return t;
@@ -256,9 +284,7 @@ public class BrowserFrame extends JFrame {
         return null;
     }
 
-    /** Called whenever the selected tab changes (tab click, 
-     * or programmatically from openTab()/closeTab()). 
-    */
+    /** Called whenever the selected tab changes (tab click, or programmatically from openTab()/closeTab()). */
     private void onActiveTabChanged() {
         int idx = tabs.getSelectedIndex();
         if (idx < 0 || idx >= openTabs.size()) {
@@ -269,10 +295,7 @@ public class BrowserFrame extends JFrame {
         refreshToolbarForActiveTab();
     }
 
-    /** Re-syncs the shared toolbar (nav buttons, address bar, 
-     * window title) to whatever the active tab is currently 
-     * showing.
-    */
+    /** Re-syncs the shared toolbar (nav buttons, address bar, window title) to whatever the active tab is currently showing. */
     private void refreshToolbarForActiveTab() {
         if (activeTab == null) return;
         backButton.setEnabled(activeTab.browser.canGoBack());
@@ -283,9 +306,9 @@ public class BrowserFrame extends JFrame {
     }
 
     /**
-     * Builds the toolbar: nav + new-tab buttons on the left, 
-     * address combo box (with its built-in dropdown arrow doubling 
-     * as a history picker) filling the rest of the row.
+     * Builds the toolbar: nav + new-tab buttons on the left, address combo
+     * box (with its built-in dropdown arrow doubling as a history picker)
+     * filling the rest of the row.
      */
     private JPanel buildToolBar() {
         JPanel toolBar = new JPanel(new BorderLayout(4, 0));
@@ -313,8 +336,35 @@ public class BrowserFrame extends JFrame {
         navPanel.add(newTabButton);
 
         // --- address bar with history dropdown ---
-        addressHistory = new DefaultComboBoxModel<>();
+        // Built already-populated (from loadHistoryLines(), a plain file
+        // read with no Swing side effects) via the Vector constructor,
+        // rather than starting empty and mutating it with addElement() in
+        // a loop afterward. The combo box's popup only ever sees ONE
+        // model state - fully populated - from the moment it's first
+        // attached, instead of a burst of individual add events landing
+        // on an already-attached-but-not-yet-realized model (which is
+        // where JComboBox's internal popup sizing has been unreliable in
+        // practice - it kept showing only the first couple of entries
+        // even though the model itself, verified via the Ctrl+P history
+        // action, genuinely held everything).
+        addressHistory = new DefaultComboBoxModel<>(new Vector<>(loadHistoryLines()));
         addressBar = new JComboBox<>(addressHistory);
+        // The dropdown popup is lightweight by default - a Swing panel
+        // painted inside this window, not a real OS window of its own.
+        // That's a problem here specifically because the CEF browser view
+        // filling most of this frame (see `client.createBrowser()` above)
+        // is a HEAVYWEIGHT native component - a real embedded child
+        // window. Heavyweight components always paint on top of
+        // lightweight ones in the same window, regardless of Swing's own
+        // z-order, so wherever the open popup overlaps the browser view
+        // beneath it, the browser wins and the popup content underneath
+        // never gets drawn - it looks like the list is short/empty past
+        // whatever sliver doesn't overlap the browser, even though the
+        // model itself (verified via Ctrl+P) is complete. Forcing the
+        // popup to be heavyweight too makes it a real OS-level window,
+        // which the platform z-orders correctly against the browser's
+        // own native window instead of losing a same-window paint race.
+        addressBar.setLightWeightPopupEnabled(false);
         addressBar.setEditable(true);
         addressBar.setFont(addressBar.getFont().deriveFont(Font.PLAIN));
 
@@ -438,6 +488,12 @@ public class BrowserFrame extends JFrame {
      */
     private void recordVisit(String url) {
         if (url == null || url.isEmpty()) return;
+        // homeUrl doesn't need to clutter the history dropdown - it's
+        // always one click away via the home/new-tab button, so there's
+        // no value in it also taking up a history slot (and every fresh
+        // BrowserFrame visits it once at startup via openTab(), which
+        // would otherwise bump it to the top of the list on every launch).
+        if (url.equals(homeUrl)) return;
         updatingAddressBar = true;
         try {
             int existing = addressHistory.getIndexOf(url);
@@ -445,15 +501,71 @@ public class BrowserFrame extends JFrame {
                 addressHistory.removeElementAt(existing);
             }
             addressHistory.insertElementAt(url, 0);
+            // Matches the old MemComboBox's MAX_MEM_LEN cap - drop the
+            // oldest (last) entry once the list grows past it.
+            while (addressHistory.getSize() > MAX_HISTORY_ENTRIES) {
+                addressHistory.removeElementAt(addressHistory.getSize() - 1);
+            }
         } finally {
             updatingAddressBar = false;
         }
+        saveHistoryToFile();
     }
 
-    /** Makes the visible address bar show the active tab's 
-     * current URL (guarded so this sync itself doesn't 
-     * look like a user pick). 
+    /**
+     * Populates the shared address history from historyFile, most-recent-
+     * first (one URL per line, same format/order MemComboBox used to read
+     * and write), so it survives across CirclePack sessions. Does nothing
+     * if there's no history file configured, or it doesn't exist yet (a
+     * brand new install/user - not an error).
      */
+    private List<String> loadHistoryLines() {
+        List<String> lines = new ArrayList<>();
+        if (historyFile == null || !historyFile.exists()) return lines;
+        try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+            String line;
+            while (lines.size() < MAX_HISTORY_ENTRIES && (line = reader.readLine()) != null) {
+                line = line.trim();
+                // Also filters out homeUrl if it's already present from a
+                // previous session (e.g. saved before this filtering was
+                // added) - dropping it here means the very next save
+                // rewrites the file without it too, so an old entry
+                // self-heals away rather than lingering indefinitely.
+                if (!line.isEmpty() && !line.equals(homeUrl)) {
+                    lines.add(line);
+                }
+            }
+        } catch (IOException e) {
+            CirclePack.cpb.errMsg("Failed to load browser history from " + historyFile + ".");
+        }
+        return lines;
+    }
+
+    /**
+     * Rewrites historyFile with the current, in-memory address history,
+     * most-recent-first - mirrors the old MemComboBox.save(), which
+     * likewise rewrote the whole file after every visit. historyFile's
+     * parent directory is created on demand (mirrors the old
+     * BrowserFrame's file.createNewFile() at construction) in case it
+     * doesn't exist yet - e.g. a brand new preferences directory.
+     */
+    private void saveHistoryToFile() {
+        if (historyFile == null) return;
+        try {
+            File parent = historyFile.getParentFile();
+            if (parent != null) parent.mkdirs();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(historyFile))) {
+                for (int i = 0; i < addressHistory.getSize(); i++) {
+                    writer.write(addressHistory.getElementAt(i));
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            CirclePack.cpb.errMsg("Failed to save browser history to " + historyFile + ".");
+        }
+    }
+
+    /** Makes the visible address bar show the active tab's current URL (guarded so this sync itself doesn't look like a user pick). */
     private void syncAddressBarToActiveTab() {
         if (activeTab == null) return;
         updatingAddressBar = true;
@@ -466,18 +578,16 @@ public class BrowserFrame extends JFrame {
     }
 
     /**
-     * Installs a classic Emacs / GNU-readline single-line editing 
-     * keymap on the address field, layered on top of the platform 
-     * defaults rather than replacing them (Home/End/arrow keys etc. 
-     * still work). Movement and simple deletion are wired to the 
-     * field's own DefaultEditorKit actions; kill/yank/transpose/
-     * history/abort are small custom actions below, backed by a 
-     * one-slot kill buffer (not a full multi-entry kill ring). 
-     * Note this deliberately overrides a couple of platform 
-     * conventions that collide with Emacs bindings — e.g. Ctrl+A 
-     * is "beginning of line" here, not "select all" — since
-     * that collision is the whole point of asking for Emacs 
-     * bindings.
+     * Installs a classic Emacs / GNU-readline single-line editing keymap
+     * on the address field, layered on top of the platform defaults
+     * rather than replacing them (Home/End/arrow keys etc. still work).
+     * Movement and simple deletion are wired to the field's own
+     * DefaultEditorKit actions; kill/yank/transpose/history/abort are
+     * small custom actions below, backed by a one-slot kill buffer (not
+     * a full multi-entry kill ring). Note this deliberately overrides a
+     * couple of platform conventions that collide with Emacs bindings —
+     * e.g. Ctrl+A is "beginning of line" here, not "select all" — since
+     * that collision is the whole point of asking for Emacs bindings.
      */
     private void installEmacsKeyBindings(JTextField field) {
         InputMap im = field.getInputMap(JComponent.WHEN_FOCUSED);
@@ -527,9 +637,7 @@ public class BrowserFrame extends JFrame {
         im.put(KeyStroke.getKeyStroke(keyCode, modifiers), actionKey);
     }
 
-    /** Ctrl+K: delete from caret to end of line, saving the 
-     * killed text. 
-     */
+    /** Ctrl+K: delete from caret to end of line, saving the killed text. */
     private Action killLineAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -545,9 +653,7 @@ public class BrowserFrame extends JFrame {
         };
     }
 
-    /** Ctrl+U: delete from start of line to caret (readline 
-     * unix-line-discard), saving the killed text. 
-     */
+    /** Ctrl+U: delete from start of line to caret (readline unix-line-discard), saving the killed text. */
     private Action killToBeginningAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -563,9 +669,7 @@ public class BrowserFrame extends JFrame {
         };
     }
 
-    /** Ctrl+W: delete the word before the caret, saving the 
-     * killed text. 
-     */
+    /** Ctrl+W: delete the word before the caret, saving the killed text. */
     private Action killWordBackAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -659,9 +763,7 @@ public class BrowserFrame extends JFrame {
         };
     }
 
-    /** Ctrl+G: abandon in-progress edits and revert to the 
-     * active tab's currently loaded URL. 
-     */
+    /** Ctrl+G: abandon in-progress edits and revert to the active tab's currently loaded URL. */
     private Action abortEditAction(JTextField field) {
         return new AbstractAction() {
             @Override
@@ -700,6 +802,16 @@ public class BrowserFrame extends JFrame {
 
         @Override
         public void onAddressChange(CefBrowser browser, CefFrame frame, String url) {
+            // CEF fires this for EVERY frame's address, not just the top-level
+            // page - any iframe on the page (ads, embedded widgets, trackers,
+            // etc.) generates its own onAddressChange with its own URL. A
+            // single page load can easily fire this a dozen+ times.
+            // Recording all of them would flood the shared "recently
+            // visited"/persisted history with sub-resource URLs nobody
+            // navigated to, evicting real entries once the MAX_HISTORY_ENTRIES
+            // cap is hit - only the main frame's address is an actual
+            // page visit worth remembering or persisting.
+            if (frame != null && !frame.isMain()) return;
             SwingUtilities.invokeLater(() -> {
                 recordVisit(url); // any tab's navigation updates the shared history list
                 BrowserTab tab = tabFor(browser);
@@ -722,11 +834,7 @@ public class BrowserFrame extends JFrame {
         }
     }
 
-    /** Keeps the back/forward/reload buttons in sync with 
-     * the ACTIVE tab's real browser history — every tab's own 
-     * load state is tracked internally by its CefBrowser 
-     * regardless. 
-     */
+    /** Keeps the back/forward/reload buttons in sync with the ACTIVE tab's real browser history — every tab's own load state is tracked internally by its CefBrowser regardless. */
     private class BrowserLoadHandler extends CefLoadHandlerAdapter {
         @Override
         public void onLoadingStateChange(CefBrowser browser, boolean isLoading,
@@ -791,10 +899,7 @@ public class BrowserFrame extends JFrame {
         }
     }
 
-    /** The URL's path, with any query string or fragment 
-     * stripped off — same slice the old code got from 
-     * URL.getFile(). 
-     */
+    /** The URL's path, with any query string or fragment stripped off — same slice the old code got from URL.getFile(). */
     private static String pathOnly(String url) {
         int end = url.length();
         int q = url.indexOf('?');
@@ -860,10 +965,7 @@ public class BrowserFrame extends JFrame {
         }).start();
     }
 
-    /** Loads a script already sitting at a local path 
-     * (readPath) into CirclePack, labeling it with labelUrl (the 
-     * true, possibly-remote, location). Must run on the EDT. 
-     */
+    /** Loads a script already sitting at a local path (readPath) into CirclePack, labelling it with labelUrl (the true, possibly-remote, location). Must run on the EDT. */
     private void loadScriptFile(String readPath, String labelUrl) {
         boolean newScript = CPBase.scriptManager.getScript(readPath, labelUrl, true) > 0;
         if (newScript) {
@@ -918,12 +1020,7 @@ public class BrowserFrame extends JFrame {
         });
     }
 
-    /** Reads packing data from reader into the active pack and 
-     * refreshes the display, mirroring the old load()'s .p/.q 
-     * handling. Must run on the EDT. path is only consulted 
-     * for its .p/.q extension (to decide whether to cleanse first)
-     * and as a label passed through to readpack().
-     */
+    /** Reads packing data from reader into the active pack and refreshes the display, mirroring the old load()'s .p/.q handling. Must run on the EDT. path is only consulted for its .p/.q extension (to decide whether to cleanse first) and as a label passed through to readpack(). */
     private void readPackingFile(BufferedReader reader, String path) {
         if (path.toLowerCase().endsWith(".p")) {
             TrafficCenter.cmdGUI("cleanse");

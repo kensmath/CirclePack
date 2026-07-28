@@ -6,6 +6,8 @@ import java.io.BufferedWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.SwingUtilities;
+
 import util.ResultPacket;
 
 import allMains.CPBase;
@@ -69,20 +71,33 @@ public class ShellManager {
 		if (rP.errorMsgs!=null) PackControl.shellManager.recordError(rP.errorMsgs);
 		
 		if (retCount<=0) { // error/err msg ?
-			if (rP.errorMsgs!=null && rP.errorMsgs.trim().length()>0) 
-				myconsole.dispConsoleMsg(rP.errorMsgs.trim());
+			if (rP.errorMsgs!=null && rP.errorMsgs.trim().length()>0) {
+				// dispConsoleMsg touches a Swing text component - marshal
+				// onto the EDT. processCmdResults() itself still runs on
+				// whichever background thread TrafficCenter started
+				// (parseWrapper()'s workerThread or forWrapper()'s
+				// forThread), so this doesn't change where command
+				// execution happens, just where the console gets updated.
+				final MyConsole mc = myconsole;
+				final String errMsg = rP.errorMsgs.trim();
+				SwingUtilities.invokeLater(() -> mc.dispConsoleMsg(errMsg));
+			}
 		}
 
 		// add command to history and update position pointer
 		if (rP.memoryFlag) {
 			cmdHistory.add(rP.origCmdString);
 			// I think this used to keep one at location of history recall
-//			if( histPos==cmdNum ) histPos++; 
+//			if( histPos==cmdNum ) histPos++;
 		}
 
-		myconsole.showCmdCount(retCount);
-
-		MessageHover.updateShellPane();
+		// showCmdCount() and updateShellPane() also touch Swing components -
+		// same reasoning as above.
+		final MyConsole mc2 = myconsole;
+		SwingUtilities.invokeLater(() -> {
+			mc2.showCmdCount(retCount);
+			MessageHover.updateShellPane();
+		});
 	}
 	
 	/**

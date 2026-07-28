@@ -3,6 +3,8 @@ package input;
 import java.util.Iterator;
 import java.util.Vector;
 
+import javax.swing.SwingUtilities;
+
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
@@ -151,10 +153,17 @@ public class TrafficCenter {
 		int packnum = rP.packData.packNum;
 		int newpnum = packnum;
 
-		// clear MyConsole displays
-		PackControl.consoleCmd.dispConsoleMsg("");
-		PackControl.consoleActive.dispConsoleMsg("");
-		PackControl.consolePair.dispConsoleMsg("");
+		// clear MyConsole displays - dispConsoleMsg touches Swing text
+		// components, so it has to be marshalled onto the EDT; parseCmdSeq
+		// itself keeps running on its own worker/'for' thread as before
+		// (see TrafficCenter.parseWrapper()/forWrapper()), so command
+		// parsing and packing computation stay just as debuggable and
+		// non-blocking as they are now.
+		SwingUtilities.invokeLater(() -> {
+			PackControl.consoleCmd.dispConsoleMsg("");
+			PackControl.consoleActive.dispConsoleMsg("");
+			PackControl.consolePair.dispConsoleMsg("");
+		});
 		
 		StringBuilder cmdbldr=new StringBuilder(rP.origCmdString);
 		String[] cmds=null;

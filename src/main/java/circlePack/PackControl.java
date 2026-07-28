@@ -20,7 +20,6 @@ import java.awt.geom.Path2D;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.DateFormat;
@@ -31,7 +30,6 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 import allMains.CPBase;
@@ -267,30 +265,6 @@ MouseMotionListener,FocusListener {
 			CirclePack.cpb.errMsg("failed to find/create 'myCirclePack/cpprefrc'");
 		}
 
-	    try {
-	        SwingUtilities.invokeAndWait(this::buildPackControlGUI);
-	    } catch (InterruptedException ex) {
-	        Thread.currentThread().interrupt();
-	        CirclePack.cpb.errMsg("Interrupted while building the PackControl GUI.");
-	    } catch (InvocationTargetException ex) {
-	        CirclePack.cpb.errMsg("Failed to build the PackControl GUI: " + ex.getCause());
-	    }
-	}
-
-	/**
-	 * Formerly the tail of initPackControl(). All of it either constructs
-	 * Swing components directly - MainFrame, the three MyConsoles,
-	 * ScriptManager/ScriptBundle/ScriptHover, VertScriptBar, the frame
-	 * buttons, every frame built in startFramesPanels() (including
-	 * MobiusFrame and BrowserFrame), and 'frame' itself - or touches them
-	 * (initGUI(), frame.pack(), resetDisplay()). It used to run on
-	 * CirclePackMain's SwingWorker background thread along with the rest of
-	 * initPackControl(); it's now marshalled onto the EDT as a single
-	 * invokeAndWait call above, still blocking that background thread until
-	 * it completes - so initialization order and the splash's timing are
-	 * unchanged.
-	 */
-	private void buildPackControlGUI() {
 		preferences = new CPPreferences(); // pref stuff set here
 
 		// Create the packing data memory storage areas
@@ -423,6 +397,7 @@ MouseMotionListener,FocusListener {
 		vertScriptBar.scriptTools.add(scriptHover.scriptToolHandler.toolBar);
 		frame.setVisible(false);
 		resetDisplay(-1.0);
+
 	}
 	
 	/**
@@ -640,8 +615,10 @@ MouseMotionListener,FocusListener {
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
 		
-		// BrowserFrame embeds a heavyweight, native CEF browser component.
-		browserFrame = new BrowserFrame("www.circlepack.com"); // messenger, historyFile);
+		// TODO: still need to add messenger - BrowserFrame doesn't have an
+		//   IMessenger-based hook yet, only the direct CirclePack.cpb.errMsg(...)
+		//   calls it already uses elsewhere.
+		browserFrame = new BrowserFrame("www.circlepack.com", historyFile);
 		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
 		browserFrame.setVisible(browserStart); // browserStart=true;
 		

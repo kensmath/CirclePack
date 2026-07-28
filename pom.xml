@@ -197,6 +197,37 @@
                         <phase>process-classes</phase>
                         <goals><goal>resources</goal></goals>
                     </execution>
+
+                    <!-- ====================================================
+                         After the CirclePack-{version}.jar has been fully
+                         assembled (see the "circlepack" execution of
+                         maven-assembly-plugin below), drop a copy of it in
+                         the project root (the "CirclePack/" directory that
+                         is the parent of target/), so it's available right
+                         next to pom.xml without digging into target/.
+
+                         Bound to "verify" (the phase immediately after
+                         "package") rather than "package" itself, so this is
+                         guaranteed to run after ALL THREE assembly
+                         executions have finished, regardless of plugin
+                         declaration order within the "package" phase.
+                         ==================================================== -->
+                    <execution>
+                        <id>copy-circlepack-jar-to-project-root</id>
+                        <phase>verify</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.basedir}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>CirclePack-${project.version}.jar</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -266,6 +297,17 @@
                         <configuration>
                             <finalName>ScriptLister</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
+                            <!-- attach=false: with appendAssemblyId=false, the assembly
+                                 plugin's default behavior (attach=true) is to register this
+                                 jar as the project's MAIN artifact. Since three executions
+                                 below all had appendAssemblyId=false, whichever ran LAST
+                                 (Info2HTML) was silently winning that slot, meaning
+                                 "mvn install"/"mvn deploy" would have installed Info2HTML's
+                                 bytes under the name CirclePack-6.0.0.jar. attach=false stops
+                                 this execution from touching that bookkeeping at all, leaving
+                                 the "circlepack" execution below as the sole main artifact -
+                                 no reordering required. -->
+                            <attach>false</attach>
                             <archive>
                                 <manifest>
                                     <mainClass>allMains.ScriptLister</mainClass>
@@ -289,6 +331,11 @@
                         <configuration>
                             <finalName>Info2HTML</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
+                            <!-- attach=false: same reasoning as the "scriptlister" execution
+                                 above. This execution runs LAST among the three, so without
+                                 this it's the one that would end up as the project's main
+                                 artifact instead of CirclePack-{version}.jar. -->
+                            <attach>false</attach>
                             <archive>
                                 <manifest>
                                     <mainClass>infoProcessing.Info2HTML</mainClass>

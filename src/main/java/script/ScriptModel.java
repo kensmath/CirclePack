@@ -29,8 +29,8 @@ import util.FileUtil;
  * creating the workingFile, setting up the DOM 
  * document. For GUI creation and interaction, 
  * see 'ScriptManager'.
- * TODO: various actions need both standalone a
- * nd GUI versions.
+ * TODO: various actions need both standalone
+ * and GUI versions.
  * @author kens
  */
 public class ScriptModel {

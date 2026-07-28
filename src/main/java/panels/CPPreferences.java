@@ -30,17 +30,17 @@ import allMains.CPBase;
 import canvasses.MainFrame;
 import circlePack.PackControl;
 
-/** Various preferences, directory options, etc. are kept in the
- * preferences file '~/myCirclePack/cpprefrc'. This class helps 
- * manage these preferences.
+/** 
+ * Various preferences, directory options, etc. are 
+ * kept in the preferences file '~/myCirclePack/cpprefrc'. 
+ * This class helps manage these preferences.
  * @author kens
  *
  */
 public class CPPreferences implements ActionListener, ItemListener{
 
   @SuppressWarnings("unused")
-private static final long 
-  serialVersionUID = 1L;
+private static final long serialVersionUID = 1L;
 
   public static boolean started=false;
   public static boolean draft;
