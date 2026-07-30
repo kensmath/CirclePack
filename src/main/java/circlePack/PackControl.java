@@ -43,6 +43,7 @@ import frames.BrowserFrame;
 import frames.FtnFrame;
 import frames.HelpHover;
 import frames.HoverPanel;
+import frames.MessageFrame;
 import frames.MessageHover;
 import frames.MobiusFrame;
 import frames.OutputFrame;
@@ -160,7 +161,8 @@ MouseMotionListener,FocusListener {
 	
 	// msgButton
 	public JButton msgButton;
-	public static MessageHover msgHover;
+	public static MessageFrame msgHover;
+//	public static MessageHover msgHover;
 	
 	// Various auxiliary frames
 	public static CPPreferences preferences; // user preferences
@@ -728,30 +730,27 @@ MouseMotionListener,FocusListener {
 		});
 
 		// Button to bring up configure window
-		msgHover=new MessageHover();
+		msgHover=new MessageFrame();
+//		msgHover=new MessageHover();
 		msgButton=new JButton("Messages");
 		msgButton.addMouseListener(msgHover);
 		msgButton.setFont(new Font(msgButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
-		msgButton.addActionListener(new ActionListener() {
+/*		msgButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (msgHover.lockedFrame.isVisible())
 					msgHover.lockedFrame.setVisible(false);
-				
-				// TODO disable to try to clear up timing problems
-/*				if (msgHover.isLocked()) { 
-					msgHover.lockedFrame.setVisible(false);
-					msgHover.loadHover();
-					msgHover.locked=false;
-				}
-*/				
+
 				else 
 					msgHover.lockframe();
 				
-				// TODO: may be unneeded, but for timing problems, keep in locked state
+				// TODO: may be unneeded, but for timing 
+				//   problems, keep in locked state
 				msgHover.locked=true; 
 			}
-		});
 
+		});
+*/
+		
 		JPanel callStack=new JPanel(new GridLayout(1,6));
 		callStack.add(msgButton);
 		callStack.add(mobButton);
@@ -979,8 +978,8 @@ MouseMotionListener,FocusListener {
 			count++;
 		if (mapPairFrame.isVisible())
 			count++;
-		if (msgHover.isLocked())
-			count++;
+//		if (msgHover.isLocked())
+//			count++;
 		if (frame.isVisible())
 			count++;
 		return count;

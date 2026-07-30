@@ -1,17 +1,15 @@
 package input;
 
-import frames.MessageHover;
-
 import java.io.BufferedWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.SwingUtilities;
 
-import util.ResultPacket;
-
 import allMains.CPBase;
 import circlePack.PackControl;
+import frames.MessageFrame;
+import util.ResultPacket;
 
 /**
  * This class manages the static command history buffer, 'runHistory'
@@ -96,7 +94,7 @@ public class ShellManager {
 		final MyConsole mc2 = myconsole;
 		SwingUtilities.invokeLater(() -> {
 			mc2.showCmdCount(retCount);
-			MessageHover.updateShellPane();
+			MessageFrame.updateShellPane();
 		});
 	}
 	

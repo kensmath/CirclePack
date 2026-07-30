@@ -955,16 +955,19 @@ public class CommandStrParser {
 				  }
 				  else if (windStr.startsWith("mes") || windStr.startsWith("msg")) {
 					  if (PackControl.anybodyOpen()>=2) {
+						  PackControl.msgHover.msgFrame.setVisible(false);
+					  }
 
 						  // keep locked (though not necessarily visible)
-						  PackControl.msgHover.locked=true;
+/*						  PackControl.msgHover.locked=true;
 						  PackControl.msgHover.lockedFrame.setVisible(false);
 						  
 						  // TODO: remove hover behavior to see if it's causing timing problems
-/*						  PackControl.msgHover.loadHover();
+						  PackControl.msgHover.loadHover();
 						  PackControl.msgHover.locked=false;
-*/
 					  }
+*/
+	
 				  }
 				  else if (windStr.startsWith("conf")) {
 					  if (PackControl.prefFrame!=null) {
@@ -2970,12 +2973,18 @@ public class CommandStrParser {
 					  PackControl.screenCtrlFrame.setState(Frame.NORMAL);
 				  }
 				  else if (windStr.startsWith("mes") || windStr.startsWith("msg")) {
+					  PackControl.msgHover.setVisible(true);
+					  PackControl.msgHover.msgFrame.setState(Frame.NORMAL);
+				  }
+					  
+					  
 					  // if iconified, bring it up
-					  if (PackControl.msgHover.isLocked() && 
+/*					  if (PackControl.msgHover.isLocked() && 
 							  PackControl.msgHover.lockedFrame.getState() == JFrame.ICONIFIED)
 						  PackControl.msgHover.lockedFrame.setState(Frame.NORMAL);
 					  PackControl.msgHover.lockframe();
 				  }
+*/				  
 				  else if (windStr.startsWith("conf")) {
 					  PackControl.prefFrame=PackControl.preferences.displayPreferencesWindow();
 					  PackControl.prefFrame.setVisible(true);

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import circlePack.PackControl;
-import frames.MessageHover;
+import frames.MessageFrame;
 import util.ResultPacket;
 
 /**
@@ -70,7 +70,7 @@ public abstract class ShellModel {
 
 		myconsole.showCmdCount(retCount);
 
-		MessageHover.updateShellPane();
+		MessageFrame.updateShellPane();
 	}
 	
 	/**
