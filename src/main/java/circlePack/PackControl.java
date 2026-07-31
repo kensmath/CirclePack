@@ -44,7 +44,6 @@ import frames.FtnFrame;
 import frames.HelpHover;
 import frames.HoverPanel;
 import frames.MessageFrame;
-import frames.MessageHover;
 import frames.MobiusFrame;
 import frames.OutputFrame;
 import frames.PairedFrame;
@@ -61,7 +60,6 @@ import input.MyConsole;
 import input.ShellManager;
 import input.SocketSource;
 import input.TrafficCenter;
-import interfaces.IMessenger;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
 import listManip.DoubleLink;
@@ -597,22 +595,6 @@ MouseMotionListener,FocusListener {
 		mobiusFrame.setLocation(ptX+20,ptY+ControlDim2.height+20);
 		mobiusFrame.setVisible(false);
 		
-		// AF: Initialize necessary arguments for BrowserFrame construction.
-		IMessenger messenger = new IMessenger() {
-			@Override
-			public void sendDebugMessage(String message) {
-				myDebugMsg(message);
-			}
-			@Override
-			public void sendErrorMessage(String message) {
-				myErrorMsg(message);
-			}
-			@Override
-			public void sendOutputMessage(String message) {
-				myMsg(message);
-			}
-		};
-		
 		String historyFile = preferences.getWebURLfile();
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
@@ -680,7 +662,7 @@ MouseMotionListener,FocusListener {
 			}
 		});
 
-		// TODP: suspend until browser is fixed
+
 		// Button to bring up Browser
 		JButton wwwButton=new JButton("Browser");
 		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
@@ -688,10 +670,10 @@ MouseMotionListener,FocusListener {
 		wwwButton.setToolTipText("Open/Close web browser window");
 		wwwButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-//				if (browserFrame.isVisible()) 
-//					browserFrame.setVisible(false); 
-//				else 
-//					browserFrame.setVisible(true);
+				if (browserFrame.isVisible()) 
+					browserFrame.setVisible(false); 
+				else 
+					browserFrame.setVisible(true);
 			}
 		});
 		
@@ -756,9 +738,7 @@ MouseMotionListener,FocusListener {
 		callStack.add(mobButton);
 		callStack.add(newftnButton);
 		callStack.add(configButton);
-/*		
 		callStack.add(wwwButton);
-*/		
 //		callStack.add(pairButton);
 		
 		return callStack;
@@ -960,7 +940,7 @@ MouseMotionListener,FocusListener {
 	 */
 	public static void displayScratch(String s) {
 		try {
-			MessageHover.scratchArea.append(s + " ");
+			MessageFrame.scratchArea.append(s + " ");
 		} catch (NullPointerException e) {
 		}
 	}

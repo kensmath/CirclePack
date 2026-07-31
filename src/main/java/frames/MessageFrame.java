@@ -14,9 +14,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
-import javax.swing.event.HyperlinkEvent;
 
-import circlePack.PackControl;
 import input.CmdSource;
 import input.MyConsole;
 import input.ShellManager;
@@ -42,7 +40,7 @@ import input.ShellManager;
 		String header = "<html><body bgcolor=fdfde0><font face=\"Segoe UI\" size=-2>";
 		String footer = "</font></body></html>";
 		JSplitPane shellScratchPane;
-		MyConsole lockedCmdLine; // command line at bottom of lockedFrame
+		MyConsole msgCmdLine; // command line at bottom
 
 		// shell stuff
 		public static JTextPane shellPane;
@@ -72,7 +70,7 @@ import input.ShellManager;
 			msgFrame.setVisible(false);
 			initComponents();
 			this.add(shellScratchPane);
-			this.add(lockedCmdLine.box);
+			this.add(msgCmdLine.box);
 			msgFrame.add(this);
 			msgFrame.pack();
 		}
@@ -121,11 +119,11 @@ import input.ShellManager;
 			msgScroller.setMinimumSize(new Dimension(WIDE/4, 50));
 			scratchScroller.setMinimumSize(new Dimension(WIDE/4, 50));
 
-			lockedCmdLine = new MyConsole(CmdSource.MESSAGE_FRAME,"messageFrame");
-			lockedCmdLine.initGUI(WIDE);
-			lockedCmdLine.box.setBackground(new Color(253, 253, 224));
-			lockedCmdLine.box.setMinimumSize(new Dimension(0, 20));
-			lockedCmdLine.box.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+			msgCmdLine = new MyConsole(CmdSource.MESSAGE_FRAME,"messageFrame");
+			msgCmdLine.initGUI(WIDE);
+			msgCmdLine.box.setBackground(new Color(253, 253, 224));
+			msgCmdLine.box.setMinimumSize(new Dimension(0, 20));
+			msgCmdLine.box.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
 		}
 
 		public void setText(String passedText) {
@@ -152,48 +150,7 @@ import input.ShellManager;
 				System.err.println("shell writing problem: "+ex.getMessage());
 			}
 		}
-		
-		/**
-		 * TODO: Not implemented when 'MsgFrame' window 
-		 * was replaced by 'ShellManager'
-		 * 
-		 * When the user clicks on a previous command 
-		 * in the 'historyPane', copy that command to 
-		 * the 'MyConsole.cmdline'. 
-		 * TODO: this was copied from 'MsgFrame' and 
-		 * not yet adjusted
-		 */
-		public void hyperlinkUpdate(HyperlinkEvent evt) {
-			if (evt.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-				// use description instead of url in case its not a valid url
-				String cmd = evt.getDescription();
-
-				if (cmd.startsWith("cmd://")) {
-					PackControl.consoleCmd.cmdline.setText(cmd.substring(6));
-					PackControl.consoleCmd.cmdline.selectAll();
-				}
-				/*
-				 * TODO: what was this for? else { // other links in output message,
-				 * update separate browser URL url = evt.getURL(); // TODO: update
-				 * separate browser window }
-				 */
-				// add these 2 if statements
-			} else if (evt.getEventType() == HyperlinkEvent.EventType.ENTERED) {
-				String tt = evt.getDescription();
-				if (tt.startsWith("tooltip://")) {
-					// strip 'tooltip://' and fix newlines
-					tt = tt.substring(10).replace("\n", "<br />");
-					shellPane.setToolTipText("<html><body>" + tt
-							+ "</body></html>");
-				}
-			} else if (evt.getEventType() == HyperlinkEvent.EventType.EXITED) {
-				shellPane.setToolTipText(null);
-			}
-		}
-		
-		public void mouseReleased(MouseEvent me) {
-//			System.out.println("released");
-		}
+				
 		public void mouseClicked(MouseEvent me) {
 			System.out.println("clicked");
 			if(msgFrame.isVisible())
@@ -202,18 +159,9 @@ import input.ShellManager;
 				msgFrame.setVisible(true);
 		}
 
-		public void mousePressed(MouseEvent me) {
-//			System.out.println("pressed");
-	/* TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020		// if the user presses the mouse, interrupt hoverFrame waiting to lock
-			appearSleeper.interrupt();
-	*/		
-		}
-
-		public void mouseEntered(MouseEvent me) {
-//			System.out.println("entered");
-		}
-		public void mouseExited(MouseEvent me) {
-//			System.out.println("exited");
-		}
+		public void mouseReleased(MouseEvent me) {}
+		public void mousePressed(MouseEvent me) {}
+		public void mouseEntered(MouseEvent me) {}
+		public void mouseExited(MouseEvent me) {}
 
 }
