@@ -17,6 +17,7 @@ import frames.OwlSplashScreen;
 public class CirclePackMain {
 
     public static void main(String[] args) {
+        // System.out.println("[timing] main(): entered at " + System.currentTimeMillis());
         // Parse command-line args up front, same logic as
         // CP_after_Splash.main() used to do. These fields (CPBase.directory,
         // CPBase.initialScript, CPBase.socketActive, CPBase.cpSocketPort)
@@ -34,23 +35,34 @@ public class CirclePackMain {
 
             splash.setAlwaysOnTop(true);
             splash.setVisible(true);
+            // Lets PackControl.openBrowserFrame() report progress on this
+            // same splash (instead of a separate popup) if something
+            // during startup - e.g. a startup script's execute-on-load
+            // command - needs the browser before it's warmed up.
+            PackControl.startupSplash = splash;
 
             SwingWorker<CirclePack, ProgressUpdate> worker = new SwingWorker<>() {
                 @Override
                 protected CirclePack doInBackground() throws Exception {
-                    // Kick off CEF's one-time native bootstrap (the several-
-                    // second "LOCATING / INITIALIZING / INITIALIZED" bundle
-                    // extraction and engine startup) here, off the EDT,
-                    // before anything else touches it. CPBase.getCefApp()
-                    // caches the CefApp it builds, so by the time
-                    // PackControl.initPackControl() constructs BrowserFrame
-                    // a bit later (marshalled onto the EDT via
-                    // invokeAndWait - see PackControl.java), that call just
-                    // returns the already-built CefApp instantly instead of
-                    // blocking the EDT for however long the native bootstrap
-                    // takes.
-                    publish(ProgressUpdate.busy("  Starting embedded browser engine..."));
-                    CPBase.getCefApp();
+                    // System.out.println("[timing] doInBackground(): entered at " + System.currentTimeMillis()
+                    //         + " on thread " + Thread.currentThread().getName());
+                    // Kick off the shared CefApp build in the background -
+                    // NOT awaited here. This used to call CPBase.getCefApp()
+                    // directly, which blocks for the whole CEF native
+                    // bootstrap (~15s of "LOCATING / INITIALIZING /
+                    // INITIALIZED"), fully serializing before "new
+                    // CirclePack(1)" below could even start - exactly the
+                    // startup delay this was meant to avoid, and why the
+                    // splash bar looked frozen (no publish() calls happen
+                    // while that block runs). warmUpCefApp() returns
+                    // immediately and finishes the build on its own
+                    // background thread; BrowserFrame is only constructed
+                    // lazily on first use (see
+                    // PackControl.openBrowserFrame()), by which point this
+                    // has very likely already finished.
+                    CPBase.warmUpCefApp();
+                    // System.out.println("[timing] doInBackground(): warmUpCefApp() call returned at "
+                    //         + System.currentTimeMillis());
 
                     // "new CirclePack(1)" (-> PackControl.initPackControl())
                     // is one long, uninstrumented block of setup work with
@@ -60,6 +72,8 @@ public class CirclePackMain {
                     // whole stretch instead of sitting frozen at 40%.
                     publish(ProgressUpdate.busy("   Starting CirclePack..."));
                     CirclePack circlePack = new CirclePack(1);
+                    // System.out.println("[timing] doInBackground(): new CirclePack(1) returned at "
+                    //         + System.currentTimeMillis());
                     publish(ProgressUpdate.at("Loading script...", 80));
                     return circlePack;
                 }
@@ -76,18 +90,25 @@ public class CirclePackMain {
 
                 @Override
                 protected void done() {
+                    // System.out.println("[timing] done(): entered at " + System.currentTimeMillis());
                     try {
                         CirclePack circlePack = get(); // re-throws doInBackground()'s exception, if any
                         System.out.println("CirclePack started\n");
                         circlePack.startCirclePack();
+                        // System.out.println("[timing] done(): startCirclePack() returned at " + System.currentTimeMillis());
                         PackControl.scriptManager.populateDisplay();
+                        // System.out.println("[timing] done(): populateDisplay() returned at " + System.currentTimeMillis());
                         splash.setStatus("Ready", 100);
                     } catch (Exception e) {
                         e.printStackTrace();
                         // TODO: show an error dialog rather than failing silently
                     } finally {
+                        // Startup's over (successfully or not) - openBrowserFrame()
+                        // goes back to its own popup if the browser is opened later.
+                        PackControl.startupSplash = null;
                         // after the window is actually populated, the splash comes down.
                         splash.dispose();
+                        // System.out.println("[timing] done(): splash disposed at " + System.currentTimeMillis());
                     }
                 }
             };

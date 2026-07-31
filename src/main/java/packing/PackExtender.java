@@ -378,7 +378,7 @@ public abstract class PackExtender {
 			MyConsole.add2CmdCompletion(strbuf.toString());
 		}
 		helpinfo.append("</table>");
-		PackControl.helpHover.AddXtendInfo(extensionType,extensionAbbrev,helpinfo.toString());
+		PackControl.helpFrame.AddXtendInfo(extensionType,extensionAbbrev,helpinfo.toString());
 	}
 	
 }

@@ -201,7 +201,7 @@ public class MyConsole extends CmdSource implements KeyListener { // ActionListe
 	 * add listener
 	 */
 	public void setMouseLtnr() {
-		tipHover.addMouseListener(PackControl.msgHover);
+		tipHover.addMouseListener(PackControl.msgFrame);
 	}
 	
 	public void keyReleased(KeyEvent ke) {

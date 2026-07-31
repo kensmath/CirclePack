@@ -1533,11 +1533,9 @@ public class ScriptManager implements ActionListener {
 				 if (n>0) {
 					 ScriptBundle.m_locator.setSuccess();
 				 }
-			 } 
-			 // TODO: suspend until browser is fixed
+			 }
 			 else if (command.equals("SCRIPT:open browser")) {
-				 PackControl.browserFrame.setVisible(true);
-				 PackControl.browserFrame.setState(Frame.NORMAL);
+				 PackControl.openBrowserFrame(); // builds it lazily if this is the first use
 			 }
 			 else if (command.equals("SCRIPT:New script")) {
 				 String tmpname=createDefaultScript();

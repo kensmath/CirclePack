@@ -955,7 +955,7 @@ public class CommandStrParser {
 				  }
 				  else if (windStr.startsWith("mes") || windStr.startsWith("msg")) {
 					  if (PackControl.anybodyOpen()>=2) {
-						  PackControl.msgHover.msgFrame.setVisible(false);
+						  PackControl.msgFrame.msgFrame.setVisible(false);
 					  }
 
 						  // keep locked (though not necessarily visible)
@@ -997,11 +997,7 @@ public class CommandStrParser {
 					  PackControl.aboutFrame.setVisible(false);
 				  }
 				  else if (windStr.startsWith("hel")) {
-					  if (PackControl.helpHover.isLocked()) { 
-						  PackControl.helpHover.lockedFrame.setVisible(false);
-						  PackControl.helpHover.loadHover();
-						  PackControl.helpHover.locked=false;
-					  }
+					  PackControl.helpFrame.setVisible(false);
 				  }
 				  else if (windStr.startsWith("inf")) { // info frame
 					  PackControl.packDataHover.setLocked(false);
@@ -2960,8 +2956,7 @@ public class CommandStrParser {
 					  PackControl.mapPairFrame.setState(Frame.NORMAL);
 				  }
 				  else if (windStr.startsWith("hel")) { // help frame
-					  PackControl.helpHover.lockframe();
-					  PackControl.helpHover.hoverFrame.setState(Frame.NORMAL);
+					  PackControl.helpFrame.setVisible(true);
 				  }
 				  else if (windStr.startsWith("inf")) { // info frame
 					  PackControl.packDataHover.setLocked(true);
@@ -2973,8 +2968,8 @@ public class CommandStrParser {
 					  PackControl.screenCtrlFrame.setState(Frame.NORMAL);
 				  }
 				  else if (windStr.startsWith("mes") || windStr.startsWith("msg")) {
-					  PackControl.msgHover.setVisible(true);
-					  PackControl.msgHover.msgFrame.setState(Frame.NORMAL);
+					  PackControl.msgFrame.setVisible(true);
+					  PackControl.msgFrame.msgFrame.setState(Frame.NORMAL);
 				  }
 					  
 					  

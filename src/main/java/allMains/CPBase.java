@@ -206,6 +206,8 @@ public abstract class CPBase {
 
 	public static synchronized CefApp getCefApp() {
 	    if (cefApp == null) {
+	        // System.out.println("[timing] getCefApp(): entering build at " + System.currentTimeMillis()
+	        //         + " on thread " + Thread.currentThread().getName());
 	        try {
 	            CefAppBuilder builder = new CefAppBuilder();
 	            builder.getCefSettings().windowless_rendering_enabled = false;
@@ -223,6 +225,7 @@ public abstract class CPBase {
 	            builder.getCefSettings().root_cache_path = cacheDir.getAbsolutePath();
 
 	            cefApp = builder.build();
+	            // System.out.println("[timing] getCefApp(): builder.build() returned at " + System.currentTimeMillis());
 	        } catch (IOException | InterruptedException | UnsupportedPlatformException | CefInitializationException e) {
 	            throw new RuntimeException("Failed to initialize embedded browser engine", e);
 	        }
@@ -235,7 +238,37 @@ public abstract class CPBase {
 	        cefApp.dispose();
 	        cefApp = null;
 	    }
-	}	
+	}
+
+	private static volatile boolean cefWarmupStarted = false;
+
+	/** Kicks off building the CefApp on a background thread so it's ready
+	 *  by the time the user opens a browser window, without delaying
+	 *  CirclePack's own startup. Safe to call more than once — only the
+	 *  first call actually starts a thread. */
+	public static void warmUpCefApp() {
+	    if (cefWarmupStarted) return;
+	    cefWarmupStarted = true;
+	    // System.out.println("[timing] warmUpCefApp(): spawning thread at " + System.currentTimeMillis()
+	    //         + " from " + Thread.currentThread().getName());
+	    Thread t = new Thread(() -> {
+	        // System.out.println("[timing] CEF-Warmup thread: running at " + System.currentTimeMillis());
+	        try {
+	            getCefApp();
+	        } catch (RuntimeException e) {
+	            System.err.println("Background CEF warm-up failed: " + e.getMessage());
+	        }
+	        // System.out.println("[timing] CEF-Warmup thread: finished at " + System.currentTimeMillis());
+	    }, "CEF-Warmup");
+	    t.setDaemon(true);
+	    t.start();
+	    // System.out.println("[timing] warmUpCefApp(): thread.start() returned at " + System.currentTimeMillis());
+	}
+
+	public static boolean isCefAppReady() {
+	    return cefApp != null;
+	}
+
 	/**
 	 * For finding correct path to 'Resources' directory in jar file
 	 * @param path, String 

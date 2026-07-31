@@ -1,7 +1,5 @@
 package frames;
 
-import input.CPFileManager;
-
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -22,6 +20,7 @@ import java.util.regex.Pattern;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -46,6 +45,7 @@ import org.w3c.dom.NodeList;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import input.CPFileManager;
 
 /**
  * Constructs a hover version of the Help frame,
@@ -57,11 +57,13 @@ import circlePack.PackControl;
  * @author kens
  *
  */
-public class HelpHover extends HoverPanel implements HyperlinkListener {
+public class HelpFrame extends JPanel implements HyperlinkListener {
 
-	private static final long 
-	serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
+	final static int WIDE = 700; 
+	final static int HIGH = 600; 
+	public JFrame helpFrame;
 	static JPanel leftPanel; // left side with list and search
 	static JTabbedPane helpTabbedPane = new JTabbedPane(); // main tabbed panel
 
@@ -80,8 +82,20 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 	private IncrementalSearch isearch;
 
 	// Constructor
-	public HelpHover(String helpfilename) {
-		super(700,600,"CirclePack Help Information");
+	public HelpFrame(String helpfilename) {
+		helpFrame=new JFrame("CirclePack Help Information");
+		helpFrame.setLocation(10,10);
+		helpFrame.setResizable(true);
+		helpFrame.setPreferredSize(new Dimension(WIDE,HIGH));
+		helpFrame.setSize(new Dimension(WIDE,HIGH));
+		helpFrame.setVisible(false);
+		initComponents();
+		helpTabbedPane.setPreferredSize(new Dimension((int)(WIDE*0.75),HIGH));
+		leftPanel.setPreferredSize(new Dimension((int)(WIDE*0.25),HIGH));
+		this.add(leftPanel);
+		this.add(helpTabbedPane);
+		helpFrame.add(this);
+		helpFrame.pack();
 	}
 
 	public void initComponents() {
@@ -229,7 +243,7 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 		};
 		// AF: Attach the window adapter to the lockedFrame of the help window.
 		// AF: We could attach it to the hoverFrame instead. The choice is arbitrary.
-		lockedFrame.addWindowListener(saveOnClose);
+		helpFrame.addWindowListener(saveOnClose);
 
 /*		6/1/13: disabled: something is slowing CirclePack --- maybe this thread??
 		// AF: Create the thread that auto-saves the MyNotes text area.
@@ -318,7 +332,6 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 		index_list=new JTextPane();
 		index_list.setContentType("text/html");
 		index_list.addHyperlinkListener(new IndexHyperlinkListener());
-		index_list.addMouseListener(this);
 		index_list.setEditable(false);
 		index_list.addFocusListener(new util.NavFocusListener(index_list));
 		try {
@@ -343,20 +356,6 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 		open(filename,textArea);
 		JScrollPane textScroll = new JScrollPane(textArea);
 		helpTabbedPane.add(textScroll,title);
-	}
-
-	public void loadHover() {
-		this.removeAll();
-		helpTabbedPane.setPreferredSize(new Dimension(myWidth,myHeight));
-		this.add(helpTabbedPane);
-	}
-
-	public void loadLocked() {
-		this.removeAll();
-		helpTabbedPane.setPreferredSize(new Dimension((int)(myWidth*0.75),myHeight));
-		leftPanel.setPreferredSize(new Dimension((int)(myWidth*0.25),myHeight));
-		this.add(leftPanel);
-		this.add(helpTabbedPane);
 	}
 
 	/**
@@ -612,7 +611,7 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 				StringTokenizer st = new StringTokenizer(e.getDescription(), " ");
 				if (st.hasMoreTokens()) {
 					String s = st.nextToken();
-					HelpHover.placeCmd(s);
+					HelpFrame.placeCmd(s);
 				}
 			}
 		}
@@ -625,3 +624,4 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 	}
 
 }
+

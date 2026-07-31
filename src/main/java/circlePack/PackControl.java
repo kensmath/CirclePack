@@ -27,9 +27,13 @@ import java.util.Date;
 import java.util.Vector;
 
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.WindowConstants;
 
 import allMains.CPBase;
@@ -41,11 +45,12 @@ import cpTalk.sockets.CPMultiServer;
 import frames.AboutFrame;
 import frames.BrowserFrame;
 import frames.FtnFrame;
-import frames.HelpHover;
+import frames.HelpFrame;
 import frames.HoverPanel;
 import frames.MessageFrame;
 import frames.MobiusFrame;
 import frames.OutputFrame;
+import frames.OwlSplashScreen;
 import frames.PairedFrame;
 import frames.ScreenCtrlFrame;
 import frames.TabbedPackDataHover;
@@ -159,14 +164,13 @@ MouseMotionListener,FocusListener {
 	
 	// msgButton
 	public JButton msgButton;
-	public static MessageFrame msgHover;
-//	public static MessageHover msgHover;
+	public static MessageFrame msgFrame;
 	
 	// Various auxiliary frames
 	public static CPPreferences preferences; // user preferences
 	public static JFrame prefFrame; 
 	public static AboutFrame aboutFrame;
-	public static HelpHover helpHover;
+	public static HelpFrame helpFrame;
 	public static ScriptHover scriptHover;
 	public static MobiusFrame mobiusFrame;
 	public static BrowserFrame browserFrame;
@@ -179,6 +183,13 @@ MouseMotionListener,FocusListener {
 	public static MyConsole consolePair;
 	public Point framesPoint;
 	public boolean browserStart;  // if true, open browser with "Welcome" at start
+
+	// browserFrame is now built lazily (see openBrowserFrame()) instead of
+	// eagerly in startFramesPanels(), since its constructor triggers
+	// CPBase.getCefApp() which can take ~15s. These hold what it needs to
+	// be built correctly whenever that first happens.
+	private static String browserHistoryFile;
+	private static Point browserLocation;
 	
 	// console
 	public static MyConsole consoleCmd;
@@ -221,6 +232,12 @@ MouseMotionListener,FocusListener {
 	 * call initGUI, etc.
 	 */
 	public void initPackControl() {
+		// Kick off building the shared CefApp in the background now, so it's
+		// likely already warmed up by the time the user opens the browser
+		// window (see startFramesPanels() below, which no longer builds the
+		// browser frame itself eagerly at startup).
+		CPBase.warmUpCefApp();
+
 		// look for preference directory/file in 'homeDirectory/myCirclePack';
 		try {
 			File prefDir = new File(CPFileManager.HomeDirectory, "myCirclePack");
@@ -580,7 +597,7 @@ MouseMotionListener,FocusListener {
 		
 		aboutFrame=new AboutFrame();
 		
-		helpHover=new HelpHover("cp_help.info");
+		helpFrame=new HelpFrame("cp_help.info");
 		
 //		helpFrame = new HelpFrame("cp_help.info");
 //		helpFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); 
@@ -595,17 +612,26 @@ MouseMotionListener,FocusListener {
 		mobiusFrame.setLocation(ptX+20,ptY+ControlDim2.height+20);
 		mobiusFrame.setVisible(false);
 		
-		String historyFile = preferences.getWebURLfile();
-		if (historyFile.startsWith("~/"))
-			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
-		
+		browserHistoryFile = preferences.getWebURLfile();
+		if (browserHistoryFile.startsWith("~/"))
+			browserHistoryFile = CPFileManager.HomeDirectory + File.separator + browserHistoryFile.substring(2);
+		browserLocation = new Point(ptX, ptY + ControlDim2.height + 90);
+
 		// TODO: still need to add messenger - BrowserFrame doesn't have an
 		//   IMessenger-based hook yet, only the direct CirclePack.cpb.errMsg(...)
 		//   calls it already uses elsewhere.
-		browserFrame = new BrowserFrame("www.circlepack.com", historyFile);
-		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
-		browserFrame.setVisible(browserStart); // browserStart=true;
-		
+		//
+		// NOTE: BrowserFrame is intentionally NOT built here anymore. Its
+		// constructor triggers CPBase.getCefApp(), which is what was adding
+		// ~15s to every startup. It's now built lazily on first use, via
+		// openBrowserFrame() (see below) - except on a brand-new install
+		// (browserStart==true), where we still want the "welcome" browser
+		// to open on its own, so we kick that off here too (non-blocking -
+		// see openBrowserFrame()'s background path).
+		if (browserStart) {
+			openBrowserFrame();
+		}
+
 		newftnFrame=new FtnFrame();
 		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		newftnFrame.setLocation(ptX,ptY+ControlDim2.height+20);
@@ -621,13 +647,121 @@ MouseMotionListener,FocusListener {
 		screenCtrlFrame.setLocation(framesPoint);
 		screenCtrlFrame.setVisible(false);
 	
-		mbarPanel=OurMenuBar();	
+		mbarPanel=OurMenuBar();
 		// STACK
 //		mbarPanel.setMaximumSize(new Dimension(ControlDim.width,32));
 //		mbarPanel.setPreferredSize(new Dimension(ControlDim.width,32));
 //		mbarPanel.setBorder(new LineBorder(Color.orange,2,false));
 	}
-	
+
+	// Set by CirclePackMain while its startup splash is still showing;
+	// null once startup has finished and the splash has been disposed.
+	// Lets openBrowserFrame(), when called during startup (e.g. from a
+	// startup script's execute-on-load command, or the brand-new-install
+	// "welcome" browser below), report progress on that same splash
+	// instead of popping up a separate "please wait" window.
+	public static OwlSplashScreen startupSplash;
+
+	/**
+	 * Opens the browser window, building it on first use (it used to be
+	 * built eagerly in startFramesPanels(), which is what was adding ~15s
+	 * to every startup - see CPBase.warmUpCefApp(), kicked off early in
+	 * initPackControl()). If the shared CefApp isn't warmed up yet:
+	 *  - during startup (startupSplash != null), this folds progress into
+	 *    the main splash and waits right there for it to finish, same as
+	 *    any other splash-screen step - nothing else needs the UI thread
+	 *    free yet, so there's no harm in staying put until it's ready.
+	 *  - otherwise (normal running), this shows its own small
+	 *    non-blocking indicator and finishes the build off the EDT so the
+	 *    rest of CirclePack stays responsive meanwhile.
+	 */
+	public static void openBrowserFrame() {
+		if (browserFrame != null) {
+			browserFrame.setVisible(true);
+			browserFrame.setState(Frame.NORMAL);
+			browserFrame.toFront();
+			return;
+		}
+
+		if (CPBase.isCefAppReady()) {
+			// Warm-up already finished elsewhere - effectively instant.
+			buildAndShowBrowserFrame();
+			return;
+		}
+
+		if (startupSplash != null) {
+			// Still within startup: fold progress into the main splash
+			// instead of a separate popup, and wait for it right here.
+			// Called from two different threads depending on why startup
+			// is opening the browser: the EDT (a startup script's
+			// execute-on-load command, via CirclePack.startCirclePack())
+			// or the background startup thread (the brand-new-install
+			// "welcome" browser, via startFramesPanels() above) - either
+			// way, blocking the calling thread is fine here since the
+			// splash is already up and nothing else needs to happen until
+			// this finishes; only actual Swing component creation has to
+			// be marshalled onto the EDT.
+			if (SwingUtilities.isEventDispatchThread()) {
+				startupSplash.setBusy("Starting embedded browser...");
+				try {
+					CPBase.getCefApp(); // blocks until the in-progress warm-up finishes
+					buildAndShowBrowserFrame();
+				} catch (RuntimeException e) {
+					System.err.println("Could not start the embedded browser: " + e.getMessage());
+				}
+			} else {
+				SwingUtilities.invokeLater(() -> startupSplash.setBusy("Starting embedded browser..."));
+				try {
+					CPBase.getCefApp();
+					SwingUtilities.invokeAndWait(PackControl::buildAndShowBrowserFrame);
+				} catch (Exception e) {
+					System.err.println("Could not start the embedded browser: " + e.getMessage());
+				}
+			}
+			return;
+		}
+
+		// Outside startup, not warmed up yet: show our own small
+		// non-blocking indicator and build off the EDT so the rest of the
+		// UI stays responsive meanwhile.
+		final JDialog starting = new JDialog((Frame) null, "Browser", false);
+		starting.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+		starting.getContentPane().add(new JLabel("  Starting browser engine, please wait...  "));
+		starting.pack();
+		starting.setLocationRelativeTo(null);
+		starting.setVisible(true);
+
+		SwingWorker<BrowserFrame, Void> worker = new SwingWorker<BrowserFrame, Void>() {
+			@Override
+			protected BrowserFrame doInBackground() {
+				// Blocks here until the in-progress (or fresh) CefApp build finishes.
+				BrowserFrame bf = new BrowserFrame("www.circlepack.com", browserHistoryFile);
+				bf.setLocation(browserLocation);
+				return bf;
+			}
+			@Override
+			protected void done() {
+				starting.dispose();
+				try {
+					browserFrame = get();
+					browserFrame.setVisible(true);
+				} catch (Exception e) {
+					JOptionPane.showMessageDialog(null,
+						"Could not start the embedded browser: " + e.getMessage(),
+						"Browser", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+		};
+		worker.execute();
+	}
+
+	/** Builds the BrowserFrame and shows it. Must run on the EDT. */
+	private static void buildAndShowBrowserFrame() {
+		browserFrame = new BrowserFrame("www.circlepack.com", browserHistoryFile);
+		browserFrame.setLocation(browserLocation);
+		browserFrame.setVisible(true);
+	}
+
 	/**
 	 * Buttons for opening various support frames.
 	 */
@@ -670,10 +804,13 @@ MouseMotionListener,FocusListener {
 		wwwButton.setToolTipText("Open/Close web browser window");
 		wwwButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (browserFrame.isVisible()) 
-					browserFrame.setVisible(false); 
-				else 
+				if (browserFrame == null) {
+					openBrowserFrame(); // first use: builds it (finishing CEF warm-up if needed)
+				} else if (browserFrame.isVisible()) {
+					browserFrame.setVisible(false);
+				} else {
 					browserFrame.setVisible(true);
+				}
 			}
 		});
 		
@@ -712,26 +849,10 @@ MouseMotionListener,FocusListener {
 		});
 
 		// Button to bring up configure window
-		msgHover=new MessageFrame();
-//		msgHover=new MessageHover();
+		msgFrame=new MessageFrame();
 		msgButton=new JButton("Messages");
-		msgButton.addMouseListener(msgHover);
+		msgButton.addMouseListener(msgFrame);
 		msgButton.setFont(new Font(msgButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
-/*		msgButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				if (msgHover.lockedFrame.isVisible())
-					msgHover.lockedFrame.setVisible(false);
-
-				else 
-					msgHover.lockframe();
-				
-				// TODO: may be unneeded, but for timing 
-				//   problems, keep in locked state
-				msgHover.locked=true; 
-			}
-
-		});
-*/
 		
 		JPanel callStack=new JPanel(new GridLayout(1,6));
 		callStack.add(msgButton);
@@ -755,19 +876,15 @@ MouseMotionListener,FocusListener {
 
 		// Bring up help frame
 		JButton button=new JButton("Help");
-		button.addMouseListener(helpHover);
-		button.setFont(new Font(button.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
 		button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (helpHover.isLocked()) { 
-					helpHover.lockedFrame.setVisible(false);
-					helpHover.loadHover();
-					helpHover.locked=false;
-				}
+				if (helpFrame.helpFrame.isVisible())  
+					helpFrame.helpFrame.setVisible(false);
 				else 
-					helpHover.lockframe();
+					helpFrame.helpFrame.setVisible(true);
 			}
 		});
+		button.setFont(new Font(button.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
 		ourBar.add(button);
 
 		// About
@@ -787,7 +904,8 @@ MouseMotionListener,FocusListener {
 		button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				// TODO: Might be nice to add a toggleLock() method to TabbedPackDataHover.
-				if (packDataHover.isLocked()) packDataHover.setLocked(false);
+				if (packDataHover.isLocked()) 
+					packDataHover.setLocked(false);
 				else packDataHover.setLocked(true);
 			}
 		});
@@ -958,8 +1076,6 @@ MouseMotionListener,FocusListener {
 			count++;
 		if (mapPairFrame.isVisible())
 			count++;
-//		if (msgHover.isLocked())
-//			count++;
 		if (frame.isVisible())
 			count++;
 		return count;
@@ -1172,12 +1288,20 @@ MouseMotionListener,FocusListener {
 	        frame.dispose();
 	    }
 
-	    // All browser windows' CEF resources are 
-	    // released now — safe to shut down the 
+	    // All browser windows' CEF resources are
+	    // released now — safe to shut down the
 	    // shared engine.
 	    shutdownCef();
+
+	    // Release the socket server's port explicitly rather than counting
+	    // on the OS to reclaim it whenever System.exit() tears the daemon
+	    // thread down - lets a restart bind the same port right away.
+	    if (cpMultiServer != null) {
+	        cpMultiServer.shutdownServer();
+	    }
+
 	    System.exit(0);
-	}	
+	}
 	
 	// MouseMotionListener 
 	public void mouseDragged(MouseEvent e) {}

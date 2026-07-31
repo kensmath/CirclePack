@@ -67,9 +67,28 @@ public class CirclePack {
 				CPBase.scriptManager.loadNamedScript(tmpname,tmpname,false); 
 			}
 			
-			// start socket?
+			// start socket? Runs on its own background thread: the first
+			// thing PackControl.startCPSocketServer() does is
+			// InetAddress.getLocalHost().getCanonicalHostName(), a
+			// reverse-DNS lookup that can hang for many seconds on some
+			// networks (confirmed via [timing] logging to be the dominant
+			// cause of CirclePack's slow startup - NOT CEF). Nothing in
+			// startup depends on the socket server being up yet, so there's
+			// no reason to make the splash screen wait on it.
 			if (CPBase.socketActive) {
-				PackControl.startCPSocketServer(CPBase.cpSocketPort);
+				// System.out.println("[timing] startCirclePack(): spawning socket startup thread at "
+				//		+ System.currentTimeMillis());
+				Thread socketThread = new Thread(() -> {
+					// System.out.println("[timing] CP-Socket-Startup thread: running at "
+					//		+ System.currentTimeMillis());
+					PackControl.startCPSocketServer(CPBase.cpSocketPort);
+					// System.out.println("[timing] CP-Socket-Startup thread: finished at "
+					//		+ System.currentTimeMillis());
+				}, "CP-Socket-Startup");
+				socketThread.setDaemon(true);
+				socketThread.start();
+				// System.out.println("[timing] startCirclePack(): socketThread.start() returned at "
+				//		+ System.currentTimeMillis());
 			}
 			
 		} catch (Exception ex) {

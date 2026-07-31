@@ -8,6 +8,7 @@ package cpTalk.sockets;
 import input.SocketSource;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -29,10 +30,32 @@ public class CPMultiServer extends Thread {
 			 */
 			setDaemon(true);
 		}
-		
+
+		/**
+		 * Stops the accept loop and closes the listening socket so the port
+		 * is released immediately, rather than relying on the OS to clean
+		 * it up whenever this daemon thread eventually dies. Safe to call
+		 * even if the server never finished starting up.
+		 */
+		public void shutdownServer() {
+			listening = false;
+			try {
+				if (serverSocket != null && !serverSocket.isClosed()) {
+					serverSocket.close(); // unblocks a pending accept() below
+				}
+			} catch (IOException e) {
+				// closing anyway - nothing to do with this
+			}
+		}
+
 		public void run() {
 			try {
-				serverSocket = new ServerSocket(port);
+				// Built unbound, then SO_REUSEADDR set before bind(), so a
+				// port left in TCP's post-close TIME_WAIT state from a prior
+				// run doesn't cause "Address already in use" on restart.
+				serverSocket = new ServerSocket();
+				serverSocket.setReuseAddress(true);
+				serverSocket.bind(new InetSocketAddress(port));
 			} catch (IOException e) {
 				System.err.println("Could not listen on port: "+port);
 				try {

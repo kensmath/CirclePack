@@ -151,12 +151,8 @@ public class BrowserFrame extends JFrame {
     // Status bar (echoes hovered link in the active tab, blank when nothing is hovered)
     private JTextField statusBar;
 
-    /** Plain, in-memory-only browser - the address history dropdown starts empty and nothing is persisted. */
-    public BrowserFrame(String startUrl) {
-        this(startUrl, null);
-    }
-
     /**
+     * Constructor
      * historyFilePath, if non-null/non-blank, is where the shared
      * "recently visited" address list is loaded from at construction and
      * saved to after every visit - CirclePack's CPBase.WEB_URL_FILE
@@ -169,10 +165,12 @@ public class BrowserFrame extends JFrame {
         this.historyFile = (historyFilePath == null || historyFilePath.trim().isEmpty())
                 ? null : new File(historyFilePath.trim());
 
-        // One client for the whole window; every tab's CefBrowser is
-        // created from it, and its handlers (registered once, below)
-        // receive callbacks for ALL of them, distinguishing tabs by the
-        // CefBrowser each callback hands back (see tabFor()).
+        // One client for the whole window; every tab's 
+        // CefBrowser is created from it, and its 
+        // handlers (registered once, below) receive 
+        // callbacks for ALL of them, distinguishing tabs 
+        // by the CefBrowser each callback hands back 
+        // (see tabFor()).
         client = CPBase.getCefApp().createClient();
         client.addDisplayHandler(new BrowserDisplayHandler());
         client.addLoadHandler(new BrowserLoadHandler());

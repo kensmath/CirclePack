@@ -1,8 +1,5 @@
 package frames;
 
-import input.TrafficCenter;
-
-import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -13,6 +10,7 @@ import javax.swing.JMenuItem;
 import allMains.CPBase;
 import circlePack.PackControl;
 import exceptions.InOutException;
+import input.TrafficCenter;
 
 /**
  * For the general menu bar that appears on 'MainFrame' 
@@ -171,10 +169,10 @@ public class CPMenuBar extends JMenuBar implements ActionListener {
 		}
 
 		if (acmd.equals("helpFrame")) {
-			if (PackControl.helpHover.isLocked()) {
-				PackControl.helpHover.lockedFrame.setState(Frame.NORMAL);
-			}
-			PackControl.helpHover.lockframe();
+			if (PackControl.helpFrame.isVisible())
+				PackControl.helpFrame.setVisible(false);
+			else
+				PackControl.helpFrame.helpFrame.setState(java.awt.Frame.NORMAL);
 			return;
 		}
 
