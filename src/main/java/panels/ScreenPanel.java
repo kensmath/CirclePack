@@ -306,8 +306,8 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 	
 	/*
 	 * stateChanged
-	 * Use: Necessary to implement change listener interface. Listens for events
-	 * on JSliders.
+	 * Use: Necessary to implement change listener interface. 
+	 * Listens for events on JSliders.
 	 * see
 	 * javax.swing.event.ChangeListener#stateChanged(javax.swing.event.ChangeEvent)
 	 */

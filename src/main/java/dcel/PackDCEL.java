@@ -180,7 +180,7 @@ public class PackDCEL {
 			p=this.p;
 		try {
 		  // may need new red chain
-		  if (redChain==null) {
+		  if (redChain==null) { // redChain=null;
 			  CombDCEL.redchain_by_edge(this,null,this.alpha,prune);
 		  } // DCELdebug.rededgecenters(this);
 		  // redChain should now exist, but can be in error, so take 
@@ -709,7 +709,9 @@ public class PackDCEL {
 	    // eutil>0? expect ends are in proper relative locations.
     	zeroEUtil();
 	    
-	    boolean debug=false; // boolean debug=true;
+	    boolean debug=false; 
+	    	// face_only=true;
+	    	// debug=true;
 	    int prev_g=-1;
 	    
 	    // first face is that of given firstHE?
@@ -721,7 +723,9 @@ public class PackDCEL {
 	    setCent4Edge(firsthe.prev, cs.center);
 	    setRad4Edge(firsthe.prev,cs.rad);
 	    
+	 // debugging
 		if (debug) {// debug=true;
+			System.err.println(firsthe.toString());
 			DCELdebug.drawEFC(this,firsthe);
 		}
 	    
@@ -737,6 +741,8 @@ public class PackDCEL {
 		hit.next(); // remove first, already laid out
 	    while (hit.hasNext()) {
 	    	HalfEdge he=hit.next();
+	    	
+
 	    	if (!useSchw) {
 	    		if (face_only)
 	    			cs=d_compOppCenter(he);
@@ -770,6 +776,7 @@ public class PackDCEL {
 	    	}
 
 	    	if (debug) {// debug=true;
+				System.err.println(he.toString());
 				DCELdebug.drawEFC(this,he);
 			}
 

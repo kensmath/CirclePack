@@ -47,6 +47,9 @@ public final class GOPackNative {
      * but not yet wired up to a JNI entry point -- the CLI's {@code
      * --polygon} flag is the only way to reach it today.
      *
+     * <p>Radii only (no centers) -- see {@link #computeMaximalPackingFromComplex}
+     * for the in-memory counterpart, which returns both.
+     *
      * @param inputPath  path to a *.p triangulation/packing file
      * @param geometryHint reserved for future use (currently ignored --
      *                     geometry is read from the file's GEOMETRY: field);
@@ -69,11 +72,11 @@ public final class GOPackNative {
     /**
      * The in-memory counterpart to {@link #computeMaximalPacking}: computes a
      * maximal packing (mode 1) directly from a triangulation already held in
-     * memory -- e.g. CirclePack's own per-vertex neighbor ("flower") data --
-     * instead of a *.p file path. Skips both the file write a caller would
-     * otherwise need to serialize its in-memory complex to text, and the
-     * native side's own text parsing (readpack()) to read it back; for large
-     * complexes that parsing step can dominate the actual packing
+     * memory -- e.g. CirclePack's own per-vertex neighbor ("flower"/"bouquet")
+     * data -- instead of a *.p file path. Skips both the file write a caller
+     * would otherwise need to serialize its in-memory complex to text, and
+     * the native side's own text parsing (readpack()) to read it back; for
+     * large complexes that parsing step can dominate the actual packing
      * computation, which is the whole reason this entry point exists. See
      * {@code gopack::Packer::loadComplex} in {@code core/src/PackerIO.cpp}
      * for the full semantics this mirrors.
@@ -82,23 +85,44 @@ public final class GOPackNative {
      * @param flowers   length {@code nodeCount+1}, 1-indexed ({@code
      *                  flowers[0]} is ignored/unused). {@code flowers[v]} is
      *                  vertex v's petal list, in the same convention as the
-     *                  *.p FLOWERS format: CLOSED (first element == last
-     *                  element) iff v is an interior vertex, OPEN (first !=
-     *                  last) iff v is a boundary vertex.
+     *                  *.p FLOWERS format (CirclePack's own "bouquet", see
+     *                  {@code packing.PackData#getBouquet()}): CLOSED (first
+     *                  element == last element) iff v is an interior vertex,
+     *                  OPEN (first != last) iff v is a boundary vertex.
      * @param geometry  0 = Euclidean, -1 = Hyperbolic, +1 = Spherical
-     *                  (matches the *.p file's GEOMETRY: field and the C++
-     *                  core's {@code gopack::Geometry} enum values directly)
+     *                  (matches the *.p file's GEOMETRY: field, {@code
+     *                  packing.PackData#hes}, and the C++ core's {@code
+     *                  gopack::Geometry} enum values directly)
      * @param tolerance reserved for future use (currently ignored -- the
      *                  port uses GOPack's fixed 0.01 visual-error cutoff);
      *                  pass 0.0
      * @param maxPasses upper bound on riffle passes (GOPack default is 20)
-     * @return euclidean radii for every vertex, in the same {@code
-     *         nodeCount+1}-length, 1-indexed convention as {@link
-     *         #computeMaximalPacking}. Throws {@link GOPackException} if the
-     *         native call fails (e.g. a malformed complex -- wrong array
-     *         lengths, no interior vertex, etc.).
+     * @return a 3-row {@code double[][]}, each row of length {@code
+     *         nodeCount+1} (1-indexed, index 0 unused), matching {@link
+     *         #computeMaximalPacking}'s indexing convention:
+     *         <ul>
+     *           <li>{@code result[0]} -- radii</li>
+     *           <li>{@code result[1]} -- center real parts</li>
+     *           <li>{@code result[2]} -- center imaginary parts</li>
+     *         </ul>
+     *         Unlike {@link #computeMaximalPacking}, this returns centers as
+     *         well as radii, since GOPack computes both together as part of
+     *         producing a valid packing. These are GOPack's internal working
+     *         values: per {@code core/include/gopack/Packer.h}, GOPack always
+     *         computes in euclidean coordinates regardless of {@code
+     *         geometry} -- no hyperbolic/spherical conversion (the
+     *         {@code eToHData}/{@code eToSData} logic in {@code writepack()})
+     *         is applied before these are returned. For a Euclidean packing
+     *         ({@code geometry == 0}) these can be written straight into
+     *         {@code PackData.setRadius}/vertex centers; for hyperbolic or
+     *         spherical packings, CirclePack is responsible for whatever
+     *         conversion its own geometry model requires before using them
+     *         -- not yet wired up on the CirclePack side as of this writing.
+     *         Throws {@link GOPackException} if the native call fails (e.g. a
+     *         malformed complex -- wrong array lengths, no interior vertex,
+     *         etc.).
      */
-    public static native double[] computeMaximalPackingFromComplex(
+    public static native double[][] computeMaximalPackingFromComplex(
             int nodeCount, int[][] flowers, int geometry, double tolerance, int maxPasses)
             throws GOPackException;
 

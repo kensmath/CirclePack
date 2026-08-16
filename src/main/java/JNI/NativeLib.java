@@ -4,154 +4,117 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
+
+import exceptions.JNIException;
 
 /**
- * This code was needed for cross-platform access to the C/C++ 
- * libraries when I was using JNI (Java Native Interface) calls. 
- * As of 3/2022 I've moved towards calls via 'ProcessBuilder'
- * and using in/output files. 
- * 
- * Various versions of the libraries were compiled in the past.
- * This may still be necessary, but is currently beyond my
- * abilities. At runtime the libraries appropriate to the 
- * operating system and computer should be stored in temporary 
- * directories and the system told where to find them.
- * 
- * @author Chris Brumgard
+ * Loads native (JNI) shared libraries that are bundled inside CirclePack's
+ * own jar under 'cdeps/&lt;platform&gt;/&lt;libFileName&gt;' (see
+ * 'src/assembly/circlepack.xml', which sweeps '**&#47;*.dll', '**&#47;*.so',
+ * '**&#47;*.dylib', and '**&#47;*.jnilib' from 'cdeps/' into the jar root,
+ * preserving subdirectory structure -- see also 'cdeps/README.md').
  *
+ * <p>A JNI shared library can't be loaded directly out of a jar -- the JVM's
+ * 'System.load'/'System.loadLibrary' need a real file on disk -- so this
+ * class extracts the right platform build to a temp file on first use and
+ * loads it from there via an absolute path. It deliberately does NOT use
+ * 'System.loadLibrary(name)' (which searches 'java.library.path'), since
+ * mutating that property after JVM startup doesn't reliably take effect.
+ *
+ * <p>Call {@link #ensureLoaded(String)} from the static initializer of the
+ * Java class that declares the corresponding 'native' methods (see
+ * 'org.kensmath.gopack.GOPackNative'). Java only runs a class's static
+ * initializer the first time that class is actually referenced, and
+ * guarantees it runs exactly once and is thread-safe -- so this gives
+ * automatic lazy, one-time loading with no extra bookkeeping needed at the
+ * call site: as long as CirclePack doesn't touch 'GOPackNative' until a
+ * large packing actually needs it, the native library extraction/load cost
+ * is paid then, not at startup.
+ *
+ * <p>Currently supports Windows and macOS only (the two platforms
+ * GOPack-cpp's CI builds for today). The macOS build is a single universal
+ * (arm64+x86_64) binary, so no per-architecture branching is needed there.
+ * Adding Linux later is just a matter of adding a case below and dropping a
+ * '.so' build into 'cdeps/linux64/'.
+ *
+ * @author kstephe2 (revived/rewritten 8/2026 for the GOPack JNI bridge;
+ *         supersedes the pre-2022 version of this class, which extracted to
+ *         the working directory rather than a temp directory, had an ad hoc
+ *         per-OS naming scheme, and was unused after the project moved to
+ *         ProcessBuilder for triangle/qhull)
  */
-public class NativeLib
-{
+public class NativeLib {
 
-	public static String writeLibrary(String path, String libname) 
-			throws IOException
-	{
-		/* Gets the name of the platform dependent library */
-		libname = System.mapLibraryName(libname);
-		
+	// libBaseName -> already loaded, so a repeat call (e.g. if another
+	// native class later shares this loader) is a cheap no-op rather than
+	// re-extracting and re-loading.
+	private static final Set<String> loaded = new HashSet<String>();
 
-        String jarURL = null;
+	/**
+	 * Make sure the native library 'libBaseName' (e.g. "gopack_jni" -- no
+	 * platform-specific prefix/suffix) is loaded into this JVM, extracting
+	 * it from the jar first if necessary. Safe to call more than once.
+	 * @param libBaseName String, e.g. "gopack_jni"
+	 * @throws JNIException if the platform isn't supported, the bundled
+	 *         resource is missing, or extraction/loading fails
+	 */
+	public static synchronized void ensureLoaded(String libBaseName) {
+		if (loaded.contains(libBaseName))
+			return;
 
-        /* Gets the URL for the file in the jar */
-        if(path.length() > 0)
-        {
-           jarURL = path+"/"+libname;
-        }else
-        {
-           jarURL = libname;
-        }
-        
-        System.out.printf("%s:%s\n", System.getProperty("os.name"), 
-        		System.getProperty("os.arch"));
-        
-        /* For Linux, either the 32 or 64 bit library gets selected */
-        if(System.getProperty("os.name").equals("Linux"))
-        {
-        	String arch = System.getProperty("os.arch");
-        	
-        	System.out.println("arch = " + arch);
-        	
-        	if(arch.equals("amd64") || arch.equals("x86_64"))
-        	{
-        		jarURL = jarURL.replaceFirst(".so$", "-x86_64.so");
-        		
-        	}else if(arch.equals("i386"))
-        	{
-        		jarURL = jarURL.replaceFirst(".so$", "-i586.so");
-        	}
-        }
+		String platformDir = platformDir();
+		String libFileName = System.mapLibraryName(libBaseName);
+			// e.g. "gopack_jni.dll" on Windows, "libgopack_jni.dylib" on Mac
+		String resourcePath = "/" + platformDir + "/" + libFileName;
 
-        
-        System.out.printf("Jar url = %s\n", jarURL);
-        
-        /* For Mac OS X, check if there is a 32 or 64 bit variant */
-        if(System.getProperty("os.name").equals("Mac OS X"))
-        {
-        	String arch = System.getProperty("os.arch");
-        	
-        	System.out.println("arch = " + arch);
-        }
-        
-		System.out.printf("Jar url = %s\n", jarURL);
+		InputStream in = NativeLib.class.getResourceAsStream(resourcePath);
+		if (in == null) {
+			throw new JNIException("Bundled native library not found at '"
+					+ resourcePath + "' in the jar. Was '" + libFileName
+					+ "' built and placed under cdeps/" + platformDir
+					+ "/ before packaging? (see cdeps/README.md)");
+		}
 
-		/* Gets an input stream to the library in the jar */
-		InputStream is = NativeLib.class.getClassLoader().getResourceAsStream(jarURL);
-		
-		System.out.printf("Inputstream is = %s\n", is);
-		
-		/* Creates a file in the current working directory of the java process
-		 * and sets the file to being deleted on exit. */
-		File libFile = new File(new File (".").getCanonicalPath() + "/" + libname);
-		libFile.createNewFile();
-		libFile.deleteOnExit();
-		
-		/* Creates an output stream to the temporary library file */
-		FileOutputStream os = new FileOutputStream(libFile);
+		File outFile = new File(System.getProperty("java.io.tmpdir"),
+				"circlepack_" + ProcessHandle.current().pid() + "_" + libFileName);
+		try {
+			try (FileOutputStream out = new FileOutputStream(outFile)) {
+				byte[] buf = new byte[8192];
+				int n;
+				while ((n = in.read(buf)) > 0)
+					out.write(buf, 0, n);
+			}
+		} catch (IOException iox) {
+			throw new JNIException("Failed extracting native library '"
+					+ libFileName + "' to temp directory: " + iox.getMessage());
+		} finally {
+			try {
+				in.close();
+			} catch (IOException ignore) {
+				// nothing to do
+			}
+		}
+		outFile.deleteOnExit();
 
-		/* Creates a buffer for copying data */
-		byte[] buf = new byte[4192];
-	 	
-		/* Copies the library file in the jar to the temporary library file */
-	    for(int amtRead = is.read(buf); amtRead > 0; amtRead = is.read(buf))
-	    {
-	    	os.write(buf, 0, amtRead);
-	    }
-	    
-	    /* Closes the streams */
-	    os.flush();
-	    os.close();
-	    is.close();
-	    
-	    System.out.printf("Path to file %s\n", libFile.getPath());
-	    
-	    /* Returns the path to the library on the system */
-	    return libFile.getPath();
-	}
-	
-	public static String writeLibrary(String libname) throws IOException
-    {
-        return writeLibrary("", libname);
-    }
-	
-	public static void loadLibrary(String path, String libname) throws IOException
-	{
-	    /* Writes the library from the jar file to the system and then gets
-	     * the path to the library file so it can be loaded */
-	    String pathToLibrary = writeLibrary(path, libname);
-	    
-	    try
-	    {
-	    	System.out.printf("Loading %s\n", pathToLibrary);
-	    	
-	    	System.out.printf("library path = %s\n", System.getProperty("java.library.path"));
-        	
-	    	System.out.printf("new path = %s\n", new File(pathToLibrary).getAbsoluteFile().getParent());
-	    	
-	    	System.setProperty("java.library.path", String.format("%s:%s", new File(pathToLibrary).getAbsoluteFile().getParent(), System.getProperty("java.library.path")));
-	    	
-	    	/* Loads the library */
-	    	System.load(pathToLibrary);
-	    	
-	    } catch(Error e) {
-	    	System.out.println(e);
-	    	throw e;
-	    }
+		System.load(outFile.getAbsolutePath());
+		loaded.add(libBaseName);
 	}
 
-	public static void loadLibrary(String libname) throws IOException
-	{
-	    /* Writes the library from the jar file to the system and then gets
-	     * the path to the library file so it can be loaded */
-		String pathToLibrary = writeLibrary(libname);
-	    
-	    try {
-	    	/* Loads the library */
-	    	System.load(pathToLibrary);
-	    	
-	    } catch(Error e) {
-	    	System.out.println(e);
-	    	throw e;
-	    }
-	    
+	/**
+	 * @return the 'cdeps/' subdirectory name to use for the running platform
+	 * @throws JNIException if the platform isn't one GOPack-cpp currently
+	 *         builds for
+	 */
+	private static String platformDir() {
+		String os = System.getProperty("os.name", "").toLowerCase();
+		if (os.contains("win"))
+			return "win64";
+		if (os.contains("mac") || os.contains("darwin"))
+			return "macos";
+		throw new JNIException("No bundled native library for platform '"
+				+ System.getProperty("os.name")
+				+ "'; only Windows and macOS are currently supported.");
 	}
 }

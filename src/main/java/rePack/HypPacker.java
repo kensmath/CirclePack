@@ -3,6 +3,7 @@ package rePack;
 import allMains.CirclePack;
 import exceptions.PackingException;
 import geometry.HyperbolicMath;
+import input.CommandStrParser;
 import packing.PackData;
 import util.TriData;
 
@@ -45,7 +46,7 @@ public class HypPacker extends RePacker {
     			index[aimnum]=i;
     			aimnum++;
     			if (p.getRadius(i)<=0)
-    				p.setRadius(i, 0.5);
+    				p.setRadius(i, 0.05);
     		}
     	}
     	if (aimnum==0) 
@@ -400,9 +401,10 @@ public class HypPacker extends RePacker {
 	}
 	
 	/**
-	 * Generic call; computes both radii and centers (use 'repack' 
-	 * if you want radii only). 
-	 * @param cycles, int, limit on recompute cycles; no effect in Orick's method
+	 * Generic call; initial radii must be set.
+	 * This computes radii and does layout for centers 
+	 * (use 'repack' if you want radii only). 
+	 * @param cycles, int: recompute cycles; no effect with GOPack
 	 * @return int; may be number of cycles used.
 	 */
 	public int maxPack(int cycles) {
@@ -431,8 +433,9 @@ public class HypPacker extends RePacker {
 	}
 	
 	/**
-	 * Call to Orick's code in GOpacker using 'SolverFunction' C code.
-	 * For maximal packing in disc computes centers and radii in concert. 
+	 * Call to Orick's code in GOpacker using 
+	 * 'SolverFunction' C code. For maximal packing 
+	 * in disc computes centers and radii in concert. 
 	 * @return 1 on success, exceptions thrown on error
 	 */
 	public int maxPackC() {
@@ -448,10 +451,11 @@ public class HypPacker extends RePacker {
 	
 	/**
      * Original repack algorithm. Used, e.g., with 
-     * overlap packings, where the more sophisticated Java routines and
-     * C methods of Orick may fail.
-     * This manipulates radii in 'pdcel.triData' structure, so user must 
-     * call 'load' first and then 'reapResults' after. 
+     * overlap packings, where the more sophisticated 
+     * Java routines and C methods of Orick may fail.
+     * This manipulates radii in 'pdcel.triData' structure, 
+     * so user must call 'load' first and then 'reapResults'
+     * after. 
      * @param passes int (may be old meaning, hence too small)
      * @return int count, -1 on error
      */

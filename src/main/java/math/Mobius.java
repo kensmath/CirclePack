@@ -1583,6 +1583,158 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		return (Mobius) M1.rmultby(MM);
 	}
 
+
+	/**
+	 * Given vector of points in the plane, return
+	 * Mobius that puts the centroid of their 
+	 * stereographic projections to the sphere 
+	 * close to the origin in 3-space. 
+	 * Return null on error. Note that the resulting 
+	 * Mobius is linear (fixes infinity). If 'sPole' 
+	 * is true, then we include a point located 
+	 * at infinity in the computation of centroid.
+	 * 		
+	 * @param pts Complex[], plane points
+	 * @param cycles int, iterative cycles
+	 * @param sPole boolean: include point at infinity
+	 * @return Mobius, null on failure to converge
+	 */
+	public static Mobius sphNormalizer(Complex[] pts,
+			int cycles,boolean sPole) {
+			
+		boolean debug=false;
+		double N_TOLER=0.001;
+		double []p0 = new double[3];
+		double []accP = new double[3];
+		p0[0]=accP[0]=1.0;
+		double bestsq = SphericalMath.transCentroid(
+				pts,new Point3D(p0[0],p0[1],p0[2]),sPole).normSq();
+		if (debug)
+			System.out.println("starting 'bestsq' = "+
+					String.format("%.6f",bestsq));
+
+		// Nested 'while' loops; after an inner loop, 
+		//   adjustments are applied to 'pts' and the 
+		//   Mobius are accumulated in 'accP'.
+		int outercount=0;
+		while (bestsq > N_TOLER && outercount < cycles) {
+			if (debug)
+				System.out.println("outercount "+outercount);
+			double delt = 2.0;
+			p0[0]=1.0;
+			p0[1]=0.0;
+			p0[2]=0.0;
+
+			// inner cycle 
+			int count = 0;
+			while (bestsq > N_TOLER && count < cycles) {
+				int gotOne = 0; // indication: which of 6 ways is best?
+				for (int i = 0; i < 3; i++) {
+					double holdp0 = p0[i];
+					p0[i] = p0[i] + delt;
+					double newnorm = SphericalMath.transCentroid(pts,new Point3D(p0[0],p0[1],p0[2]),sPole).normSq();
+					p0[i] = holdp0; // reset for continued tries
+					if (newnorm < bestsq) { // improved
+						bestsq = newnorm;
+						gotOne = i + 1;
+					} 
+					else {
+						p0[i] = p0[i] - delt;
+						newnorm = SphericalMath.transCentroid(pts,new Point3D(p0[0],p0[1],p0[2]),sPole).normSq();
+						p0[i] = holdp0;
+						if (newnorm < bestsq) {
+							bestsq = newnorm;
+							gotOne = -i - 1;
+						}
+					}
+				}
+
+				// if moving in 6 directions didn't improve, 
+				//   then cut 'delt'
+				if (gotOne == 0)
+					delt = delt / 2;
+				// else success: which change was the best?
+				else {
+					if (debug)
+						System.out.println(" at count " + count + ", bestsq = " + String.format("%.6f", bestsq));
+
+					switch (gotOne) {
+					case 1: {
+						p0[0] += delt;
+						break;
+					}
+					case 2: {
+						p0[1] += delt;
+						break;
+					}
+					case 3: {
+						p0[2] += delt;
+						break;
+					}
+					case -1: {
+						p0[0] -= delt;
+						break;
+					}
+					case -2: {
+						p0[1] -= delt;
+						break;
+					}
+					case -3: {
+						p0[2] -= delt;
+						break;
+					}
+					} // end of switch
+				}
+				count++;
+			} // end of inner while
+
+			// check if we're done
+			if (bestsq<N_TOLER) {
+				// apply new 'p0' to accumulated transforms in 'accP'
+				accP[0] =p0[0]*accP[0];
+				accP[1] =p0[0]*accP[1]+p0[1];
+				accP[2] =p0[0]*accP[2]+p0[2];
+				if (debug) {
+					System.out.println("A, B, C = " + 
+							String.format("%.6f", accP[0]) + " " + 
+							String.format("%.6f", accP[1])
+							+ " " + String.format("%.6f", accP[2]));
+					System.out.println("end 'bestsq' = "+
+							String.format("%.6f",bestsq));
+				}
+				return new Mobius(new Complex(accP[0]), 
+						new Complex(accP[1], accP[2]), 
+						new Complex(0.0), new Complex(1.0));
+			}
+
+			// else, apply the new transformation to 'pts'
+			double A=p0[0];
+			Complex B=new Complex(p0[1],p0[2]);
+			for (int v=1;v<=pts.length-1;v++) {
+				pts[v]=new Complex(pts[v].times(A)).add(B);
+			}
+			// accumulate it in 'accP'
+			accP[0] =A*accP[0];
+			accP[1] =A*accP[1]+p0[1];
+			accP[2] =A*accP[2]+p0[2];
+
+			outercount++;
+		} // end outer while
+			
+		if (debug) {
+			System.out.println("A, B, C = " + 
+					String.format("%.6f", accP[0]) + " " + 
+					String.format("%.6f", accP[1])
+					+ " " + String.format("%.6f", accP[2]));
+			System.out.println("end 'bestsq' = "+
+					String.format("%.6f",bestsq));
+		}
+		return new Mobius(new Complex(accP[0]), 
+				new Complex(accP[1], accP[2]), 
+				new Complex(0.0), new Complex(1.0));
+	}
+
+	
 	/**
 	 * Create Mobius mapping outside of eucl circle c1 
 	 * onto inside of eucl circle c2. Radius of c1 

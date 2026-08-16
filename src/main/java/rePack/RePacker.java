@@ -175,20 +175,20 @@ public abstract class RePacker {
 	public abstract void reapResults();
 	
 	/**
-	 * Generic 'repack' call is for the (now) classical "riffle" 
-	 * methods, typically with supersteps, etc. Originally in C,
-	 * now implemented in Java. 
+	 * Generic 'repack' call is for the (now) classical 
+	 * "riffle" methods, typically with supersteps, etc. 
 	 * 
 	 * TODO: may want to reimplement in C library, could be part 
 	 * of standalone code (and might be faster??).
 	 * 
-	 * On success, reap resulting radii; normally centers are computed 
-	 * in a separate call at user's discretion. 
+	 * On success, reap resulting radii; normally centers 
+	 * are computed in a separate call at user's discretion. 
 	 * 
-	 * Alternate methods: Orick's method and using GOpack for max 
-	 * packings (which by nature also computes centers); also 
-	 * 'oldReliable' is used, e.g., when there are nontrivial 
-	 * inversive distances involved.
+	 * Alternate methods: Orick's method and using GOpack 
+	 * for max packings and some polygonal packings (this
+	 * method by nature also computes centers); also 
+	 * 'oldReliable' is used, e.g., when there are 
+	 * nontrivial inversive distances specified.
 	 * 
 	 * @param pass_limit
 	 * @return int, 0 on error
@@ -198,7 +198,8 @@ public abstract class RePacker {
 		
 		passLimit=pass_limit;
 
-		/* OBE: as of 2015, have retired the old HeavyC stuff
+		/* OBE: as of 2015, have retired the old HeavyC 
+		 * stuff
 		 * 
 		// use sparse matrix riffle methods of SolverFunction if requested and OK (see 'setSparseC')
 		// TODO: having some problem with this for hyperbolic packings: crash with

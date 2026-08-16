@@ -62,7 +62,15 @@ public abstract class CPBase {
 	// directory for codes such as 'triangle', 'qhull'
 	public static File TempDirectory=new File(System.getProperty("java.io.tmpdir"));
 	public static File ScreenShotDirectory=new File(System.getProperty("java.io.tmpdir"));
-		
+
+	// Whether to route packing computations through the native GOPack JNI
+	// library. Starts true; 'gopackAvailable()' flips it to false (once,
+	// permanently, for the life of this JVM) the first time a caller
+	// actually tries to use GOPack and the native library fails to load,
+	// at which point CirclePack's own Java packing routines take over.
+	public static boolean useGOPack=true;
+	private static boolean gopackChecked=false; // has gopackAvailable() run its probe yet?
+
 	// Useful constants
 	public static final double pi2=Math.PI*2.0;
 	public static final double piby2=Math.PI/2.0;
@@ -185,7 +193,7 @@ public abstract class CPBase {
 	public static int DEFAULT_FILL_OPACITY = 125;
 	public static int DEFAULT_SPHERE_OPACITY = 255;
 	public static Font DEFAULT_INDEX_FONT = new Font("Sarif",Font.ITALIC,11);
-	public static int DEFAULT_LINETHICKNESS = 2;
+	public static int DEFAULT_LINETHICKNESS = 1;
 	
 	public static int DEFAULT_PS_PAGE_SIZE=7; // PostScript page size in inches 
 	public static Color defaultCircleColor;
@@ -398,6 +406,49 @@ public abstract class CPBase {
         	return false;
         }
         
+        return true;
+    }
+
+    /**
+     * Lazily checks whether the native GOPack JNI library is available,
+     * loading it on the first call (via 'GOPackNative's static initializer,
+     * triggered here by calling the harmless 'nativeVersion()' diagnostic
+     * method rather than a real packing call, so a genuine packing failure
+     * later -- e.g. a malformed complex -- is never confused with a load
+     * failure). The result is cached in 'useGOPack': once false, this
+     * returns false immediately without touching 'GOPackNative' again.
+     * <p>
+     * That "never touch it again" part isn't just an optimization: once a
+     * Java class's static initializer throws, the JVM marks the class
+     * permanently failed, and every subsequent reference throws
+     * 'NoClassDefFoundError' for the rest of this JVM's life, rather than
+     * retrying the load. So every GOPack call site should route through
+     * this method (or check 'useGOPack' after calling it once) instead of
+     * calling 'GOPackNative' directly.
+     * <p>
+     * Load failure shows up as 'Throwable', not 'Exception': a missing/
+     * unreadable bundled library throws 'JNIException' (see
+     * 'JNI.NativeLib'), a bad or missing native library file throws
+     * 'UnsatisfiedLinkError', and either gets wrapped in
+     * 'ExceptionInInitializerError' the first time the static initializer
+     * runs. None of those are 'Exception' subclasses, so catching
+     * 'Throwable' here is required, not just cautious.
+     * @return boolean, true iff GOPack is available for use
+     */
+    public static synchronized boolean gopackAvailable() {
+        if (!useGOPack)
+            return false;
+        if (gopackChecked)
+            return true;
+        gopackChecked=true;
+        try {
+            org.kensmath.gopack.GOPackNative.nativeVersion(); // triggers the static load
+        } catch (Throwable t) {
+            System.err.println("GOPack native library unavailable, "+
+                    "falling back to Java packing routines: "+t);
+            useGOPack=false;
+            return false;
+        }
         return true;
     }
 

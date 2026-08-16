@@ -97,8 +97,9 @@ public class ShapeShifter extends PackExtender {
 			}
 		}
 		
-		/* This code was just started under the old HeavyC library
-		 * setup and used calls to Orick's "cpi" routines. This is OBE.
+		/* This code was just started under the old 
+		 * HeavyC library setup and used calls to 
+		 * Orick's "cpi" routines. This is OBE.
 
 		if (cmd.startsWith("fit")) {
 			PackLite pLite=new PackLite(packData);

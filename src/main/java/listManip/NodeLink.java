@@ -1492,7 +1492,7 @@ public class NodeLink extends LinkedList<Integer> {
 		if (seed==0)
 			throw new ParserException("failed finding 'seed'");
 		
-		int []gens=p.label_seed_generations(seed,greens,-1,false);
+		int[] gens=p.label_seed_generations(seed,greens,-1,false);
 //		boolean hit=false;
 		
 		// are there any vertices not reached (not counting green)?

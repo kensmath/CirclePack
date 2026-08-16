@@ -1,6 +1,8 @@
 package rePack;
 
+import allMains.CPBase;
 import allMains.CirclePack;
+import complex.Complex;
 import exceptions.PackingException;
 import input.CommandStrParser;
 import packing.PackData;
@@ -31,7 +33,7 @@ public class SphPacker extends RePacker {
     	if (pass_limit<0) 
     		passLimit=PASSLIMIT;
 		else 
-			passLimit=pass_limit; // passLimit=5000;
+			passLimit=pass_limit; 
     	punc_vert=p_vert;
 		punc_vert=load(); 
 	}
@@ -69,26 +71,67 @@ public class SphPacker extends RePacker {
 	}
 	
 	/**
-	 * puncture, max_pack in hyp plane, but move to sphere is in
-	 * 'reapResults', thus allowing chance to see intermediate stage.
-	 * @param pass_limit
-	 * @return
+	 * For packings over 1000 vertices, call GOPack.
+	 * Otherwise, pack the exterior of some face as 
+	 * euclidean, then normalize so stereo projection
+	 * puts the 3D centroid at the origin.
+	 * @param pass_limit, int: does nothing for GOPack
+	 * @return 1 on success
 	 * @throws PackingException
 	 */
 	public int maxPack(int pass_limit) throws PackingException {
 		passLimit=pass_limit; // passLimit=5000;
+		
+/*		
+		if (p.nodeCount>1001 && CPBase.gopackAvailable()) {
+			System.err.println("Libraries loaded, I guess");
+		}
+		else { 
+*/
+/* NOTE: I tried puncturing a face; it works, but layout is
+ * not good. Revert to puncturing a vertex		
+*/
 		int ok=1;
-		if (punc_vert!=p.nodeCount) {
-			if (p.packDCEL.swapNodes(punc_vert,p.nodeCount)==0)
+		int farvert=p.packDCEL.layoutOrder.getLast().origin.vertIndx;
+
+		if (farvert!=p.nodeCount) {
+			if (p.packDCEL.swapNodes(farvert,p.nodeCount)==0)
 				return 0;
 			swap=true;
 		}
 		ok *=p.puncture_vert(p.nodeCount);
-		if (ok!=0) {
-			ok *=CommandStrParser.jexecute(p,"max_pack "+passLimit);
-		}
 		if (ok==0)
 			return 0;
+		p.geom_to_h();
+		p.setGeometry(-1);
+	  
+		// must set radii before creating h_packer
+		CommandStrParser.jexecute(p,"set_rad .01 a");
+		CommandStrParser.jexecute(p,"set_rad 9.0 b");
+		HypPacker h_packer=new HypPacker(p,-1);
+		ok *=h_packer.maxPack(passLimit);
+		
+// debugging		
+		CommandStrParser.jexecute(p,"copy 1");		
+		CommandStrParser.jexecute("disp -w -c -R");		
+		
+		if (ok==0) {
+			System.err.println("ok is 0");
+			return 0;
+		}
+		int act=p.geom_to_s();
+		p.setGeometry(1);
+		if (act==0)
+			System.err.println("geom_to_s failed");
+		act=CommandStrParser.jexecute(p,"add_ideal");
+		if (act==0)
+			System.err.println("add_ideal failed");
+		CommandStrParser.jexecute(p,"copy 2");		
+
+		p.setCenter(p.nodeCount,new Complex(0.0));
+		p.setRadius(p.nodeCount,CPBase.piby2);
+		if (swap && p.packDCEL.swapNodes(punc_vert,p.nodeCount)==0)
+			CirclePack.cpb.errMsg("Opps, failed to swap vertices back");
 		return ok;
 	}
 	

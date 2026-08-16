@@ -30,7 +30,6 @@ public class NSpole {
 	double latesterr;
 	Point3D centroid;	// latest centroid
 	boolean debug=true; // false;
-	int edgeCount;      // need for tangency normalization
 	
 	// Constructor
 	public NSpole(PackData p) {
@@ -42,7 +41,6 @@ public class NSpole {
 		Mob=new Mobius(); // identity
 		maxerr=.001;
 		latesterr=2.0;
-		edgeCount=0;
 	}
 	
 	/**
@@ -52,8 +50,6 @@ public class NSpole {
 	 */
 	public int parseNSpole(Vector<Vector<String>> flagSegs) {
 		Vector<String> items;
-		edgeCount=setEdgeCount();
-
 		// default: put centroid of tangency points or centers at origin, 1/2017
 		if (flagSegs == null || flagSegs.size() == 0) {
 			
@@ -62,10 +58,11 @@ public class NSpole {
 
 			// if overlaps are set, use the centers.
 			if (ivdflag) {
-				Complex []T=loadCenters(); // from local data
+				Complex[] T=loadCenters(); // from local data
 				double best=SphericalMath.getCentroid(T).normSq();
 
-				// Repeat since circle centers not Mobius invariant
+				// Repeat since circle centers not Mobius 
+				//   invariant
 				int cnt=0;
 				while (best>.001 && cnt<=5) {
 					
@@ -75,7 +72,7 @@ public class NSpole {
 					for (int j=1;j<=N;j++)
 						pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 
-					Mobius mob=sphNormalizer(pts,20,false,false);
+					Mobius mob=Mobius.sphNormalizer(pts,20,false);
 					if (mob==null) {
 						CirclePack.cpb.errMsg("centroid with centers failed, revert to Orick's code");
 						return CPI_CP_PackingUtility.normalize(packData);
@@ -92,18 +89,18 @@ public class NSpole {
 				return cnt;
 			}
 			
-			// typical: tangency points (as they're Mobius invariant)
+			// typical: tangency points (which are Mobius invariant)
 			int rslt=0;
 			for (int rep=1;rep<=1;rep++) {
-				Complex []T=loadTangency();
+				Complex[] T=NSpole.loadTangency(packData);
 			
 				// convert to points in the plane
 				int N=T.length-1;
-				Complex []pts=new Complex[N+1];
+				Complex[] pts=new Complex[N+1];
 				for (int j=1;j<=N;j++)
 					pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 
-				Mob=sphNormalizer(pts,20,false,false);
+				Mob=Mobius.sphNormalizer(pts,20,false);
 				if (Mob==null) {
 					CirclePack.cpb.errMsg("centroid normalization failed, revert to Orick's code");
 					return CPI_CP_PackingUtility.normalize(packData); 
@@ -136,7 +133,7 @@ public class NSpole {
 			
 			// tangency case
 			if (c=='t') {
-				Complex []T=loadTangency();
+				Complex[] T=NSpole.loadTangency(packData);
 				double best=SphericalMath.getCentroid(T).normSq();
 				System.out.println("starting tangency centroid: "+best);
 
@@ -147,14 +144,14 @@ public class NSpole {
 					pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 
 				// 
-				Mob=sphNormalizer(pts,20,false,true);
+				Mob=Mobius.sphNormalizer(pts,20,false);
 				if (Mob==null) {
 					CirclePack.cpb.errMsg("'sphNormalizer' seems to have failed");
 					return 0;
 				}
 
 				int ans=saveCircles(Mob);
-				T=loadTangency();
+				T=NSpole.loadTangency(packData);
 				best=SphericalMath.getCentroid(T).normSq();
 				System.out.println("ending tangency centroid: "+best);
 				return ans;
@@ -176,7 +173,7 @@ public class NSpole {
 					for (int j=1;j<=N;j++)
 						pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 					
-					Mobius mob=sphNormalizer(pts,20,false,true);
+					Mobius mob=Mobius.sphNormalizer(pts,20,false);
 					if (mob==null) {
 						System.out.println("centroid with centers failed");
 						return 0;
@@ -266,15 +263,15 @@ public class NSpole {
 	}
 	
 	/**
-	 * Load a vector with tangency points based on current radii/centers
+	 * Load a vector with tangency points based on 
+	 * current radii/centers
 	 * @return Complex[]
 	 */
-	public Complex []loadTangency() {
-		if (edgeCount==0)
-			edgeCount=setEdgeCount();
+	public static Complex[] loadTangency(PackData packData) {
+		int edgeCount=NSpole.setEdgeCount(packData);
 		
 		// store tangency points
-		Complex []ans=new Complex[edgeCount+1];
+		Complex[] ans=new Complex[edgeCount+1];
 		int tick=0;
 		for (int v=1;v<=packData.nodeCount;v++) {
 			Complex z=packData.getCenter(v);
@@ -303,157 +300,7 @@ public class NSpole {
 		return ans;
 	}
 
-	/**
-	 * Given vector of points in the plane, 
-	 * return a Mobius transformation that puts 
-	 * the centroid of their stereo projections 
-	 * to the sphere close to the origin in 3-space. 
-	 * Return null on error. Note that the resulting 
-	 * Mobius is linear (fixes infinity). If 'sPole' 
-	 * is true, then we include a point located 
-	 * at infinity.
-	 * 		
-	 * @param pts Complex[], plane points
-	 * @param cycles int, iterative cycles
-	 * @param sPole boolean: include point at infinity
-	 * @param debug boolean
-	 * @return Mobius, null on failure to converge
-	 */
-	public static Mobius sphNormalizer(Complex[] pts,
-			int cycles,boolean sPole,boolean debug) {
-			
-		double N_TOLER=0.001;
-		double []p0 = new double[3];
-		double []accP = new double[3];
-		p0[0]=accP[0]=1.0;
-		double bestsq = SphericalMath.transCentroid(
-				pts,new Point3D(p0[0],p0[1],p0[2]),sPole).normSq();
-		if (debug)
-			System.out.println("starting 'bestsq' = "+
-					String.format("%.6f",bestsq));
-
-		// Nested 'while' loops; after an inner loop, 
-		//   adjustments are applied to 'pts' and the 
-		//   Mobius are accumulated in 'accP'.
-		int outercount=0;
-		while (bestsq > N_TOLER && outercount < cycles) {
-			if (debug)
-				System.out.println("outercount "+outercount);
-			double delt = 2.0;
-			p0[0]=1.0;
-			p0[1]=0.0;
-			p0[2]=0.0;
-
-			// inner cycle 
-			int count = 0;
-			while (bestsq > N_TOLER && count < cycles) {
-				int gotOne = 0; // indication: which of 6 ways is best?
-				for (int i = 0; i < 3; i++) {
-					double holdp0 = p0[i];
-					p0[i] = p0[i] + delt;
-					double newnorm = SphericalMath.transCentroid(pts,new Point3D(p0[0],p0[1],p0[2]),sPole).normSq();
-					p0[i] = holdp0; // reset for continued tries
-					if (newnorm < bestsq) { // improved
-						bestsq = newnorm;
-						gotOne = i + 1;
-					} 
-					else {
-						p0[i] = p0[i] - delt;
-						newnorm = SphericalMath.transCentroid(pts,new Point3D(p0[0],p0[1],p0[2]),sPole).normSq();
-						p0[i] = holdp0;
-						if (newnorm < bestsq) {
-							bestsq = newnorm;
-							gotOne = -i - 1;
-						}
-					}
-				}
-
-				// if moving in 6 directions didn't improve, 
-				//   then cut 'delt'
-				if (gotOne == 0)
-					delt = delt / 2;
-				// else success: which change was the best?
-				else {
-					if (debug)
-						System.out.println(" at count " + count + ", bestsq = " + String.format("%.6f", bestsq));
-
-					switch (gotOne) {
-					case 1: {
-						p0[0] += delt;
-						break;
-					}
-					case 2: {
-						p0[1] += delt;
-						break;
-					}
-					case 3: {
-						p0[2] += delt;
-						break;
-					}
-					case -1: {
-						p0[0] -= delt;
-						break;
-					}
-					case -2: {
-						p0[1] -= delt;
-						break;
-					}
-					case -3: {
-						p0[2] -= delt;
-						break;
-					}
-					} // end of switch
-				}
-				count++;
-			} // end of inner while
-
-			// check if we're done
-			if (bestsq<N_TOLER) {
-				// apply new 'p0' to accumulated transforms in 'accP'
-				accP[0] =p0[0]*accP[0];
-				accP[1] =p0[0]*accP[1]+p0[1];
-				accP[2] =p0[0]*accP[2]+p0[2];
-				if (debug) {
-					System.out.println("A, B, C = " + 
-							String.format("%.6f", accP[0]) + " " + 
-							String.format("%.6f", accP[1])
-							+ " " + String.format("%.6f", accP[2]));
-					System.out.println("end 'bestsq' = "+
-							String.format("%.6f",bestsq));
-				}
-				return new Mobius(new Complex(accP[0]), 
-						new Complex(accP[1], accP[2]), 
-						new Complex(0.0), new Complex(1.0));
-			}
-
-			// else, apply the new transformation to 'pts'
-			double A=p0[0];
-			Complex B=new Complex(p0[1],p0[2]);
-			for (int v=1;v<=pts.length-1;v++) {
-				pts[v]=new Complex(pts[v].times(A)).add(B);
-			}
-			// accumulate it in 'accP'
-			accP[0] =A*accP[0];
-			accP[1] =A*accP[1]+p0[1];
-			accP[2] =A*accP[2]+p0[2];
-
-			outercount++;
-		} // end outer while
-			
-		if (debug) {
-			System.out.println("A, B, C = " + 
-					String.format("%.6f", accP[0]) + " " + 
-					String.format("%.6f", accP[1])
-					+ " " + String.format("%.6f", accP[2]));
-			System.out.println("end 'bestsq' = "+
-					String.format("%.6f",bestsq));
-		}
-		return new Mobius(new Complex(accP[0]), 
-				new Complex(accP[1], accP[2]), 
-				new Complex(0.0), new Complex(1.0));
-	}
-
-	public int setEdgeCount() {
+	public static int setEdgeCount(PackData packData) {
 		int eCount=0;
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int[] petals=packData.getPetals(v);

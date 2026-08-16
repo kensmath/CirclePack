@@ -17,13 +17,14 @@ import math.Point3D;
 import util.StringUtil;
 
 /**
- * Static routines for creating Delaunay triangulations with
- * calls to 'qhull' (for the sphere) and 'triangle' for regions
- * in the plane. I'm using 'ProcessBuilder'.
- * The idea is to put the qhull executable in CPBase.TempDirectory when
- * the program first loads. For a run, the data is placed into a 
- * 'DelaunayData' object, the code is run, and the output triangulation
- * is put back into 'DelaunayData'.
+ * Static routines for creating Delaunay triangulations 
+ * with calls to 'qhull' (for the sphere) and 'triangle' 
+ * for regions in the plane. I'm using 'ProcessBuilder'.
+ * The idea is to put the qhull executable in 
+ * CPBase.TempDirectory when
+ * the program first loads. For a run, the data is placed 
+ * into a 'DelaunayData' object, the code is run, and 
+ * the output triangulation is put back into 'DelaunayData'.
  * @author kstephe2, 3/2022
  *
  */
@@ -31,7 +32,8 @@ public class ProcessDelaunay {
 	static int localID=0;
 
 	/**
-	 * For the sphere, the data is theta/phi; here it is converted to xyz form and
+	 * For the sphere, the data is theta/phi; here it 
+	 * is converted to xyz form and
 	 * put in an input file with this format:
 	 * 
 	 * 3 <N> x1 y1 z1 x2 y2 z2 ... xN yN zN

@@ -3131,6 +3131,31 @@ public class CombDCEL {
 	}
 	
 	/**
+	 * The given HalfEdge must be part of a closed
+	 * boundary loop with just 3 edges. Calling routine
+	 * must handle cleanup.
+	 * @param pdcel PackDCEL
+	 * %param bedge HalfEdge
+	 * @return 1 on success
+	 */
+	public static int add_ideal_face(PackDCEL pdcel,HalfEdge bedge) {
+		if (!bedge.isBdry() || bedge.next.next.next!=bedge) {
+			CirclePack.cpb.errMsg(bedge.toString()+" is not part of 3-edge bdry loop");
+			return 0;
+		}
+		int newIndx=pdcel.faceCount+1;
+		bedge.face.faceIndx=newIndx;
+		bedge.origin.bdryFlag=0;
+		bedge.next.origin.bdryFlag=0;
+		bedge.next.next.origin.bdryFlag=0;
+		bedge.twin.myRedEdge=null;
+		bedge.next.twin.myRedEdge=null;
+		bedge.next.next.twin.myRedEdge=null;
+		pdcel.redChain=null;
+		return 1;
+	}
+	
+	/**
 	 * Combinatorial reflection with ball bearings.
 	 * That is, attach a reflected copy across one 
 	 * or more boundary components or a segment, 

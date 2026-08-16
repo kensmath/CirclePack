@@ -192,9 +192,10 @@ public class CPdrawing extends JPanel implements MouseListener {
 	}
 	
 	/**
-	 * Reset defaults for CirclePack; e.g., when new packing is loaded.
-	 * Note: may prefer different behavior, eg., when copying another 
-	 * packing.
+	 * Reset defaults for CirclePack; e.g., when new 
+	 * packing is loaded.
+	 * Note: may prefer different behavior, eg., when 
+	 * copying another packing.
 	 * @param startup, boolean: true only when first instantiating 'CPDrawing'.
 	 */
 	public void reset(boolean startup) {
@@ -1030,8 +1031,9 @@ public class CPdrawing extends JPanel implements MouseListener {
 	}
 
 	/**
-	 * Sets the linethickness and adjusts the current and default strokes.
-	 * (Note: default needs resetting in case 'pixFactor' changes)
+	 * Sets the linethickness and adjusts the current 
+	 * and default strokes. (Note: default needs 
+	 * resetting in case 'pixFactor' changes)
 	 * @param thickness
 	 */
 	public void setLineThickness(int thickness) {

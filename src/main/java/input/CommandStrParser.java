@@ -2185,7 +2185,7 @@ public class CommandStrParser {
 	    			  CirclePack.cpb.ParamSpecification.toString()+"\n");
 	      }
 	      
-		  // NOTE: this is not operational now (3/2022), as the JNI 
+		  // OBE: this is not operational now (3/2022), as the JNI 
 		  //       calls to C code have been removed.
 		  // flags: s=start, r=restart, c=continue, g=get rad/cent, q=quality
 		  else if (cmd.startsWith("GOpack")) {
@@ -2318,8 +2318,9 @@ public class CommandStrParser {
 						  goPack.setCorners(null,null); // null corner info; mode to MAX_PACK
 						  goPack.setMode(GOpacker.MAX_PACK); // default
 						  
-						  // Is this a sphere? then handled with a punctured face
-						  // set bdry rad/centers (if there are 3 bdry verts)
+						  // Is this a sphere? then handled with 
+						  // a punctured face; set bdry rad/centers 
+						  // (if there are 3 bdry verts)
 						  if (goPack.setSphBdry()>0) 
 							  goPack.setMode(GOpacker.FIXED_BDRY);
 							  
@@ -7950,6 +7951,7 @@ public class CommandStrParser {
 	    		  return 0;
 	    	  }
 	    	  int puncture_v=-1;
+	    	  packData.set_aim_default();
 	    	  int cycles=CPBase.RIFFLE_COUNT;
 	    	  // Note: there should be only one flag segment. Call forms:
 	    	  //	max_pack [k], for k cycles
@@ -7974,7 +7976,8 @@ public class CommandStrParser {
 	    				  	"applies to spherical case only");
 	    		  }
 	    		  
-	    		  if (items.size()==1 || items.size()==3) { // last entry, cycles
+	    		  // last entry, cycles
+	    		  if (items.size()==1 || items.size()==3) { 
 	    			  int k=Integer.parseInt(items.lastElement());
 	    			  if (k<1) cycles=1;
 	    			  else if (k>100000) cycles=100000;
@@ -7983,7 +7986,7 @@ public class CommandStrParser {
 	    	  } catch(Exception ex) {}
 	    	  }
 
-	    	  // hyperbolic is most common
+	    	  // most common: hyperbolic, or eucl with boundary
 	    	  if ((packData.intrinsicGeom==0 && 
 	    			  packData.packDCEL.idealFaceCount>0) ||
 	    			  packData.intrinsicGeom<0) {
@@ -7991,15 +7994,14 @@ public class CommandStrParser {
 	    			  packData.geom_to_h();
 	    			  packData.setGeometry(-1);
 	    		  }
-	    		  packData.set_aim_default();
-	    		  try { // e.g., there may be no boundary vertices
-	    			  jexecute(packData,"set_rad 9.0 b");
-	    		  } catch (Exception ex) { } 
-	    		  
-	    		  HypPacker h_packer=new HypPacker(packData,-1);
+	    		  // must set radii before creating 'h_packer'
+	    		  CommandStrParser.jexecute(packData,"set_rad .01 a");
+	    		  CommandStrParser.jexecute(packData,"set_rad 9.0 b");
+				  HypPacker h_packer=new HypPacker(packData,-1);
     			  count=h_packer.maxPack(cycles);
 	    	  }
-	    	  else if (packData.intrinsicGeom==0) { // can only be 1-torus
+	    	  // at this point, if eucldean, can only be 1-torus
+	    	  else if (packData.intrinsicGeom==0) { 
 	    		  if (packData.hes !=0) {
 	    			  packData.geom_to_e();
 	    			  packData.setGeometry(0);
@@ -8012,13 +8014,13 @@ public class CommandStrParser {
 				  packData.fillcurves();
 				  packData.packDCEL.layoutPacking();
 	    	  }
+	    	  // last possibility, sphere
 	    	  else if (packData.intrinsicGeom > 0) { // sph (NSpole also called)
 	    		  packData.hes=1;
     			  packData.setGeometry(1);
-	    		  packData.set_aim_default();
     			  SphPacker sphpack=new SphPacker(packData,puncture_v,cycles);
     			  count=sphpack.maxPack(cycles);
-    			  sphpack.reapResults();
+    			  CommandStrParser.jexecute(packData,"NSpole");
 	    	  }
 	    	  else 
 	    		  return 0;
@@ -9145,7 +9147,7 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("repack")) {
 	    	  if (packData.hes>0) {
 	    		  CirclePack.cpb.msg("repack: no spherical algorithm yet "+
-	    				  "exists; you can use 'max_pack'");
+	    				  "exists; however, you can use 'max_pack'");
 	    		  return 0;
 	    	  }
 	    	  

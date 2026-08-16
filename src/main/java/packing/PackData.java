@@ -2324,11 +2324,13 @@ public class PackData{
 	}
 	
 	/**
-	 * Call for appropriate 'repacking' procedure. This creates
-	 * tmp 'RePacker' and applies methods depending on geometry,
-	 * topology, bdry/overlap conditions, C library availability,
-	 * and so forth. Uses HeavyC methods, if available.
-	 * NOTE: for 'oldReliable' riffle method, call with arguments
+	 * Call for appropriate 'repacking' procedure. 
+	 * This creates tmp 'RePacker' and applies methods 
+	 * depending on geometry, topology, bdry/invDist 
+	 * conditions, C library availability, and so forth. 
+	 * Uses HeavyC methods, if available.
+	 * NOTE: for 'oldReliable' riffle method, call with 
+	 * arguments.
 	 * Catches 'PackingException's.
 	 * @param passes int, max repack cycles
 	 * @return int, 0 on error. (may reflect interations completed)
@@ -2341,12 +2343,12 @@ public class PackData{
 	 * Call for appropriate 'repacking' procedure. 
 	 * This creates tmp 'RePacker' and applies 
 	 * methods depending on geometry, topology, 
-	 * bdry/overlap conditions, C library availability, 
-	 * and so forth. Can disallow Orick's methods 
+	 * bdry/invDist conditions, C library availability, 
+	 * and so forth. Can disallow GOPack C++ methods 
 	 * in GOpacker. Catches 'PackingException's.
 	 * @param passes int, max repack cycles
 	 * @param oldRel boolean; true, use old reliable method
-	 * @param useC boolean; true, OK to use Orick's method.
+	 * @param useC boolean; true, OK to use GOPack method.
 	 * @return int, -1 on error. (may reflect iterations completed)
 	 */
 	public int repack_call(int passes, boolean oldRel, boolean useC) {
@@ -2371,7 +2373,7 @@ public class PackData{
 					throw new PackingException("dcel hyp repack failure");
 			}
 			else if (hes>0) { // sph
-				CirclePack.cpb.errMsg("DCEL packing routines don't (yet) handle sph geom.");
+				CirclePack.cpb.errMsg("There is no spherical repacking, but 'max_pack' can be called");
 				return 0;
 			}
 			else  { // eucl
@@ -2382,9 +2384,10 @@ public class PackData{
 					ans=e_packer.genericRePack(passes);
 				}
 				else
-					ans=e_packer.oldReliable(passes); // TODO: specify in call
+					ans=e_packer.oldReliable(passes); 
 				if (ans>0) {
 					e_packer.reapResults();
+					fillcurves();
 					return ans;
 				}
 				else if (ans<0)
@@ -3018,7 +3021,7 @@ public class PackData{
 		int count = 0;
 		int far_vert = seed;
 
-		if (!status || seed < 1 || seed > nodeCount ||
+		if (!status || seed < 1 || (seed > nodeCount) ||
 				(greens != null && greens.length > seed && greens[seed] < 0))
 			return null;
 
@@ -3043,7 +3046,7 @@ public class PackData{
 		boolean hits = true;
 		int gen_count = 2;
 		while (hits && genlist != null &&
-				(max <= 0 || gen_count <= max || bdry_hits)) {
+				(max <= 0 || (gen_count <= max) || bdry_hits)) {
 			hits = false;
 			VertList vertlist = genlist;
 			VertList gtrace;
@@ -3065,8 +3068,8 @@ public class PackData{
 						gtrace.v=w;
 						hits=true;
 						last_marked=w;
-						he=he.prev.twin;
 					}
+					he=he.prev.twin;
 				} while(he!=vert.halfedge);
 				vertlist = vertlist.next;
 			} while (vertlist != null);
@@ -3144,15 +3147,17 @@ public class PackData{
 	  } 
 
 	  /**
-	   * adds a vertex which connects up to all vertices on the boundary
-	   * component of vertices in given list. Combinatorics are reset.
-	   * Lose any 'xyzpoint' info.
+	   * adds a vertex which connects up to all vertices 
+	   * on the boundary component of vertices in given 
+	   * list. Combinatorics are reset. Lose any 
+	   * 'xyzpoint' info.
 	   * @param vertlist NodeLink
 	   * @return int count
 	   */
 	  public int add_ideal(NodeLink vertlist) {
-	    if (vertlist==null || vertlist.size()==0) 
-	    	return 0;
+	    if (vertlist==null || vertlist.size()==0) {
+	    	vertlist=new NodeLink(this,"b");
+	    }
 	    int count=0;
 	    Iterator<Integer> vlist=vertlist.iterator();
    		int origCount=nodeCount;
@@ -3236,7 +3241,6 @@ public class PackData{
 	    geom_to_s(); // project to sphere 
   	  	setGeometry(1);
   	  	cpDrawing.setPackName();
-
 
   		try { 
   			packDCEL.redChain=null;
