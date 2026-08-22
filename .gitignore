@@ -3,3 +3,11 @@
 /target/
 /jcef-bundle/
 *~
+
+# The "copy-circlepack-jar-to-project-root" step in pom.xml drops a copy of
+# the built main jar here after every local `mvn package`/`mvn verify` --
+# harmless for local convenience, but it shouldn't get committed: the jar
+# is now published automatically as a GitHub Release asset by CI on each
+# version tag (see .github/workflows/build.yml), so a copy checked into
+# the repo would just be dead weight that goes stale immediately.
+/CirclePack-v*.jar

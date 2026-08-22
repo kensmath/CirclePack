@@ -8,7 +8,7 @@
 
     <groupId>kensmath</groupId>    <!-- change to your actual group -->
     <artifactId>CirclePack</artifactId>
-    <version>6.0.0</version>           <!-- overridden at build time via -Drevision= if needed -->
+    <version>${revision}</version>
     <packaging>jar</packaging>
 
     <name>CirclePack</name>
@@ -23,6 +23,28 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- CI-friendly version (Maven's built-in ${revision} indirection,
+             supported since 3.5.0): <version> above references this
+             property instead of a literal, so it can be overridden on the
+             command line with -Drevision=X.Y.Z without editing this file.
+             CirclePack's CI does exactly that, but only for a build
+             triggered by a pushed git tag like "v6.1.0": it strips the
+             "v" and passes -Drevision=6.1.0, so the resulting jar is
+             CirclePack-6.1.0.jar and that becomes a permanent, versioned
+             GitHub Release. Every other build (regular pushes, PRs, local
+             `mvn package`) gets no override and falls back to the default
+             below, same as before this changed; there's still no
+             automatic version bump; bump this default by hand between
+             releases if you want it to track intent, or ignore it and rely
+             entirely on the tag. -->
+        <revision>6.0.0</revision>
+
+        <!-- Single source of truth for the main jar's base filename, so the
+             "v" prefix only has to be written once and can't drift between
+             the assembly plugin's finalName and the copy-to-root include
+             pattern below. Produces e.g. "CirclePack-v6.0.0". -->
+        <circlepack.jarBaseName>CirclePack-v${project.version}</circlepack.jarBaseName>
     </properties>
 
     <!-- ================================================================
@@ -169,7 +191,7 @@
                     maven-resources-plugin run bound to the same "process-classes" phase,
                     declared right after this plugin so it runs second — re-copies
                     src/main/resources into target/classes so the freshly generated doc files
-                    are present before "package" builds CirclePack-{version}.jar.
+                    are present before "package" builds CirclePack-v{version}.jar.
                     ============================================================ -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -199,7 +221,7 @@
                     </execution>
 
                     <!-- ====================================================
-                         After the CirclePack-{version}.jar has been fully
+                         After the CirclePack-v{version}.jar has been fully
                          assembled (see the "circlepack" execution of
                          maven-assembly-plugin below), drop a copy of it in
                          the project root (the "CirclePack/" directory that
@@ -222,7 +244,7 @@
                                 <resource>
                                     <directory>${project.build.directory}</directory>
                                     <includes>
-                                        <include>CirclePack-${project.version}.jar</include>
+                                        <include>${circlepack.jarBaseName}.jar</include>
                                     </includes>
                                 </resource>
                             </resources>
@@ -234,7 +256,7 @@
             <!-- ============================================================
                  3. THREE JARS via maven-assembly-plugin
 
-                 JAR 1 — CirclePack-{version}.jar  Main-Class: allMains.CirclePackMain
+                 JAR 1 — CirclePack-v{version}.jar  Main-Class: allMains.CirclePackMain
                           Contains: all compiled classes except runCirclePack/**
                                     (the old, retired launcher), native libs
                                     (dll/so/jnilib/dylib), and all dependency
@@ -266,13 +288,13 @@
                 <version>3.6.0</version>
                 <executions>
 
-                    <!-- JAR 1: CirclePack-{version}.jar -->
+                    <!-- JAR 1: CirclePack-v{version}.jar -->
                     <execution>
                         <id>circlepack</id>
                         <phase>package</phase>
                         <goals><goal>single</goal></goals>
                         <configuration>
-                            <finalName>CirclePack-${project.version}</finalName>
+                            <finalName>${circlepack.jarBaseName}</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
                             <archive>
                                 <manifest>
@@ -303,7 +325,7 @@
                                  below all had appendAssemblyId=false, whichever ran LAST
                                  (Info2HTML) was silently winning that slot, meaning
                                  "mvn install"/"mvn deploy" would have installed Info2HTML's
-                                 bytes under the name CirclePack-6.0.0.jar. attach=false stops
+                                 bytes under the name CirclePack-v6.0.0.jar. attach=false stops
                                  this execution from touching that bookkeeping at all, leaving
                                  the "circlepack" execution below as the sole main artifact -
                                  no reordering required. -->
@@ -334,7 +356,7 @@
                             <!-- attach=false: same reasoning as the "scriptlister" execution
                                  above. This execution runs LAST among the three, so without
                                  this it's the one that would end up as the project's main
-                                 artifact instead of CirclePack-{version}.jar. -->
+                                 artifact instead of CirclePack-v{version}.jar. -->
                             <attach>false</attach>
                             <archive>
                                 <manifest>
