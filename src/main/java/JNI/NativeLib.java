@@ -25,7 +25,7 @@ import exceptions.JNIException;
  *
  * <p>Call {@link #ensureLoaded(String)} from the static initializer of the
  * Java class that declares the corresponding 'native' methods (see
- * 'org.kensmath.gopack.GOPackNative'). Java only runs a class's static
+ * 'JNI.GOPackNative'). Java only runs a class's static
  * initializer the first time that class is actually referenced, and
  * guarantees it runs exactly once and is thread-safe -- so this gives
  * automatic lazy, one-time loading with no extra bookkeeping needed at the
@@ -33,11 +33,15 @@ import exceptions.JNIException;
  * large packing actually needs it, the native library extraction/load cost
  * is paid then, not at startup.
  *
- * <p>Currently supports Windows and macOS only (the two platforms
- * GOPack-cpp's CI builds for today). The macOS build is a single universal
- * (arm64+x86_64) binary, so no per-architecture branching is needed there.
- * Adding Linux later is just a matter of adding a case below and dropping a
- * '.so' build into 'cdeps/linux64/'.
+ * <p>Supports Windows, macOS, and Linux (the three platforms GOPack-cpp's
+ * CI builds for). The macOS build is a single universal (arm64+x86_64)
+ * binary, so no per-architecture branching is needed there. The Linux build
+ * is x86_64 only (no arm64), and is deliberately compiled against an old
+ * glibc baseline (CentOS 7 / manylinux2014, glibc 2.17 -- see
+ * '.github/workflows/build.yml' in the GOPack-cpp repository) rather than
+ * whatever glibc the CI runner itself happens to have, so the resulting
+ * 'libgopack_jni.so' loads on a wide range of still-current Linux distros
+ * instead of only ones at least as new as the build machine.
  *
  * @author kstephe2 (revived/rewritten 8/2026 for the GOPack JNI bridge;
  *         supersedes the pre-2022 version of this class, which extracted to
@@ -113,8 +117,20 @@ public class NativeLib {
 			return "win64";
 		if (os.contains("mac") || os.contains("darwin"))
 			return "macos";
+		if (os.contains("linux")) {
+			String arch = System.getProperty("os.arch", "").toLowerCase();
+			// GOPack-cpp's Linux CI build is x86_64 only (see
+			// .github/workflows/build.yml) -- unlike the macOS universal
+			// binary, there's no single file covering both architectures,
+			// so an arm64/aarch64 JVM has no bundled library to load yet.
+			if (arch.contains("aarch64") || arch.contains("arm"))
+				throw new JNIException("No bundled native library for Linux/"
+						+ System.getProperty("os.arch")
+						+ "; GOPack-cpp's Linux build is currently x86_64 only.");
+			return "linux64";
+		}
 		throw new JNIException("No bundled native library for platform '"
 				+ System.getProperty("os.name")
-				+ "'; only Windows and macOS are currently supported.");
+				+ "'; only Windows, macOS, and Linux (x86_64) are currently supported.");
 	}
 }

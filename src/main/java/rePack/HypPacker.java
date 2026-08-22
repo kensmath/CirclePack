@@ -1,9 +1,14 @@
 package rePack;
 
+import JNI.GOPackException;
+import JNI.GOPackNative;
+
+import allMains.CPBase;
 import allMains.CirclePack;
+import complex.Complex;
 import exceptions.PackingException;
+import geometry.CircleSimple;
 import geometry.HyperbolicMath;
-import input.CommandStrParser;
 import packing.PackData;
 import util.TriData;
 
@@ -15,6 +20,9 @@ import util.TriData;
  */
 public class HypPacker extends RePacker {
 	
+	// For max packing larger packings, use GOPack
+    public static final int HYP_GOPACK_THRESHOLD=1001;  
+
     // Constructors
     public HypPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
@@ -401,61 +409,79 @@ public class HypPacker extends RePacker {
 	}
 	
 	/**
-	 * Generic call; initial radii must be set.
-	 * This computes radii and does layout for centers 
+	 * Large max packings of the disc call GOPack,
+	 * which returns radii and centers. For smaller 
+	 * packings or those using the 'oldreliable' 
+	 * method, initial radii must be set. We get
+	 * radii and then layout to get ceters. 
 	 * (use 'repack' if you want radii only). 
-	 * @param cycles, int: recompute cycles; no effect with GOPack
+	 * @param cycles, int: recompute cycles; no 
+	 * 	  effect with GOPack
 	 * @return int; may be number of cycles used.
 	 */
 	public int maxPack(int cycles) {
 		int count=0;
-		try {
-  		  	if (oldReliable)
+	  	if (oldReliable) {
+	  		try {
   		  		count=d_oldReliable(cycles);
-  		  	else
-  		  		count=genericRePack(cycles);
+  				if (count!=0)
+  					reapResults();
+  				p.fillcurves();
+  				p.packDCEL.layoutPacking();
+  				return count;
+	  		} catch (Exception ex) {
+	  			throw new PackingException("error in 'old_reliable'");
+	  		}
+	  	}
+
+		// For large packings, hand the whole complex to
+		// the C++ version of GOPack:
+		if (p.nodeCount>HYP_GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+			try {
+				int[][] bouquet=p.getBouquet();
+				double[][] result=GOPackNative.computeMaximalPackingFromComplex(
+						p.nodeCount,bouquet,-1,0.0,passLimit); // geometry=-1: hyp
+				double[] radii=result[0];
+				double[] centerX=result[1];
+				double[] centerY=result[2];
+
+				// GOPack returns its internal eucl data,
+				// which we convert to hyp.
+				for (int v=1;v<=p.nodeCount;v++) {
+					CircleSimple sc=HyperbolicMath.e_to_h_data(
+							new Complex(centerX[v],centerY[v]),radii[v]);
+					p.setCenter(v,new Complex(sc.center));
+					p.setRadius(v,sc.rad);
+				}
+				p.setGeometry(-1);
+				return 1;
+			} catch (GOPackException gpe) {
+				System.err.println("GOPack hyperbolic max-pack failed, "+
+						"falling back to Java routine: "+gpe.getMessage());
+				// fall through to generic repack
+			}
+		}
+
+		// generic repack
+		try {
+			count=genericRePack(cycles);
 			if (count!=0)
 				reapResults();
 			p.fillcurves();
 			p.packDCEL.layoutPacking();
+			return count;
 		} catch (Exception ex) {
-			throw new PackingException("error in Java DCEL max_pack computation"); 
+  			throw new PackingException("failure in generic packing");
 		}
+	}
 
-		// TODO: in future, want GOpack option
-//		else { // use GOpack
-//			count=maxPackC();
-//			    normalize to put alpha at the origin, gamma on imaginary axis.
-//			p.center_point(p.getCenter(p.getAlpha()));
-//			p.rotate((-1.0)*p.getCenter(p.getGamma()).arg()+Math.PI/2.0);
-//		}
-		return count;
-	}
-	
-	/**
-	 * Call to Orick's code in GOpacker using 
-	 * 'SolverFunction' C code. For maximal packing 
-	 * in disc computes centers and radii in concert. 
-	 * @return 1 on success, exceptions thrown on error
-	 */
-	public int maxPackC() {
-		GOpacker goPack=new GOpacker(p);
-		goPack.setMode(1); // max pack mode
-		goPack.startRiffle();
-		int cnt=goPack.continueRiffle(30);
-		goPack=null;
-		
-		p.fillcurves();
-		return cnt;
-	}
-	
 	/**
      * Original repack algorithm. Used, e.g., with 
      * overlap packings, where the more sophisticated 
-     * Java routines and C methods of Orick may fail.
-     * This manipulates radii in 'pdcel.triData' structure, 
-     * so user must call 'load' first and then 'reapResults'
-     * after. 
+     * Java routines and GOPack methods of Orick may fail.
+     * This manipulates radii in 'pdcel.triData' 
+     * structure, so user must call 'load' first and 
+     * then 'reapResults' after. 
      * @param passes int (may be old meaning, hence too small)
      * @return int count, -1 on error
      */

@@ -112,38 +112,49 @@ public class RandomTriangulation {
 	}
 
 	/**
-	 * This code generates random triangulations of various regions/types. 
-	 * Currently allow rectangles, 1-tori, regions bounded by curves, or
+	 * This code generates random triangulations of 
+	 * various regions/types. Currently allow rectangles, 
+	 * 1-tori, regions bounded by curves, or as
 	 * determined by geometry. 
 	 *
-	 * Want to convert these to packings, keeping not only the 
-	 * combinatorics, but also the centers, so that we can generate 
-	 * images, do mappings, etc, based on the triangulation itself. 
-	 * Therefore, it is up to the user to apply further manipulations to the resulting packing. 
+	 * Want to convert these to packings, keeping 
+	 * not only the combinatorics, but also the 
+	 * centers, so that before repacking we can 
+	 * generate images, mappings, etc, based on the 
+	 * triangulation itself. Therefore, it is up to 
+	 * the user to apply further manipulations to 
+	 * the resulting packing. 
 	 *
 	 * Arguments (parsed from command in calling routine):
 	 * 
-	 * (1) N number of interior vertices: in non-tori case, 4*sqrt(N) 
-	 *   additional vertices are added to the boundary of the region or 
-	 *   rectangle. If N<12 then set N=12. 
+	 * (1) N number of interior vertices: in non-tori 
+	 *   case, 4*sqrt(N) additional vertices are added 
+	 *   to the boundary of the region or rectangle. 
+	 *   If N<12 then set N=12. 
 	 *
-	 * (2) debug: if true, then don't call random seed (though it may
-	 *   have been called elsewhere in CirclePack).
+	 * (2) debug: if true, then don't call random seed 
+	 *   (though it may have been called elsewhere in 
+	 *   CirclePack).
 	 *
-	 * (3) hes: geometry: if >0, we triangulate the sphere; choose 
-	 *   points randomly in [0 1]x[0 1] and use theta = 2*Pi*x
+	 * (3) hes: geometry: if >0, we triangulate the 
+	 *   full sphere; choose points randomly in 
+	 *   [0 1]x[0 1] and use theta = 2*Pi*x
 	 *   and phi=acos(2*y-1)
 	 *
-	 * (4) Aspect: Random triangulation of rectangle of this aspect; this
-	 *   takes precedence over hex>0. If Aspect negative, use only interior
+	 * (4) Aspect: Random triangulation of rectangle 
+	 *   of this aspect; this takes precedence over 
+	 *   hex>0. If Aspect negative, use only interior
 	 *   points, do NOT create additional bdry points.
 	 *
-	 * (5) Gamma: Pathlist defining region.(if non-NULL, takes precedence 
-	 *   over Aspect. Can be on sphere, but don't yet know how
-	 * 	 (but Gamma always given in 2D cartesian coordinates).
+	 * (5) Gamma: Pathlist defining region.(if 
+	 *   non-NULL, takes precedence over Aspect. Can 
+	 *   be on sphere, but don't yet know how
+	 * 	 (but Gamma always given in 2D cartesian 
+	 *   coordinates).
 	 *
-	 * (6) Tau: random triangulation of torus with complex modulus Tau. 
-	 * 	 If z is non-zero, this takes precedence over hes, Gamma, and 
+	 * (6) Tau: random triangulation of torus with 
+	 *   complex modulus Tau. If z is non-zero, this 
+	 *   takes precedence over hes, Gamma, and 
 	 *   Aspect.
 	 *
 	 * @param N int; minimum of 12 points
@@ -175,8 +186,8 @@ public class RandomTriangulation {
 	  // we can only do triangulation of full sphere --- 
 	  //   can't yet handle subregions. By Archimedes, 
 	  //   randomize with respect to spherical area by 
-	  //   choosing theta uniformly in [0,2pi) and z uniformly 
-	  //   in [-1,1] to give phi=acos(z).
+	  //   choosing theta uniformly in [0,2pi) and z 
+	  //   uniformly in [-1,1] to give phi=acos(z).
 	  if (hes>0) {
 		  Z_bdry=null;
 		  if (debug_flag) random.setSeed(1); // for debugging

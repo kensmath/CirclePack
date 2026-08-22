@@ -442,7 +442,7 @@ public abstract class CPBase {
             return true;
         gopackChecked=true;
         try {
-            org.kensmath.gopack.GOPackNative.nativeVersion(); // triggers the static load
+            JNI.GOPackNative.nativeVersion(); // triggers the static load
         } catch (Throwable t) {
             System.err.println("GOPack native library unavailable, "+
                     "falling back to Java packing routines: "+t);

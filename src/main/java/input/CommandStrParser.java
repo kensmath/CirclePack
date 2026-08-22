@@ -18,6 +18,10 @@ import java.util.Vector;
 
 import javax.swing.JFrame;
 
+import JNI.GOPackException;
+import JNI.GOPackNative;
+import JNI.RandomComplexResult;
+
 import JNI.DelaunayData;
 import JNI.ProcessDelaunay;
 import allMains.CPBase;
@@ -116,8 +120,9 @@ import posting.PostFactory;
 import posting.PostParser;
 import random.RandomTriangulation;
 import rePack.EuclPacker;
-import rePack.GOpacker;
+import rePack.GORandom;
 import rePack.HypPacker;
+import rePack.RePacker;
 import rePack.SphPacker;
 import schwarzWork.SchwarzMap;
 import schwarzWork.SchwarzPack;
@@ -2184,338 +2189,6 @@ public class CommandStrParser {
 	    	  CirclePack.cpb.msg("Parametric expression: "+
 	    			  CirclePack.cpb.ParamSpecification.toString()+"\n");
 	      }
-	      
-		  // OBE: this is not operational now (3/2022), as the JNI 
-		  //       calls to C code have been removed.
-		  // flags: s=start, r=restart, c=continue, g=get rad/cent, q=quality
-		  else if (cmd.startsWith("GOpack")) {
-			  count=0;
-			  GOpacker goPack;
-			  
-			  // first, check for -v {v..} flag specifying which vertices are
-			  //   treated as "interior". If this is found, then new GOPacker is
-			  //   initiated and other flags are ignored --- user must make
-			  //   separate calls to us the GOpacker.
-			  Iterator<Vector<String>> fsq=flagSegs.iterator();
-			  while (fsq.hasNext()) {
-				  Vector<String> itms=fsq.next();
-				  if (itms.size()>0 && itms.get(0).startsWith("-v")) {
-					  itms.remove(0);
-					  NodeLink v_int=new NodeLink(packData,itms);
-					  if (v_int==null || v_int.size()<1)
-						  throw new ParserException("GOpack usage: GOpack "
-						  		+ "-v {v..}");
-					  goPack=new GOpacker(packData,v_int);
-				  	  packData.rePacker=goPack;
-				  	  CirclePack.cpb.msg("GOpack started for subcomplex");
-				  	  return 1;
-				  }
-			  }
-			  
-			  // otherwise, normal processing
-			  int defaultPasses=10;
-			  int passes=-1;
-			  char c='s'; // default to "start" only
-			  char gotc='s'; // exclusive flag
-			  boolean gotflag=false; // some flags are exclusive
-			  
-			  // start the persistent 'RePacker' if not already running
-			  if (packData.rePacker==null || 
-					  !(packData.rePacker instanceof GOpacker) ||
-					  packData.rePacker.p==null || 
-					  packData.rePacker.p!= packData ||
-					  packData.nodeCount!=((GOpacker)packData.rePacker).
-					  	getOrigNodeCount()) {  
-				  goPack=new GOpacker(packData,passes);
-			  	  packData.rePacker=goPack;
-			  }
-			  else {
-				  goPack=(GOpacker)packData.rePacker;
-				  c='c'; // default to "continue"
-				  gotc=c;
-			  }
-			  
-			  // default: continue with whatever was going on
-			  if (flagSegs==null || flagSegs.size()==0) {
-				  int ct=goPack.continueRiffle(defaultPasses);
-				  CirclePack.cpb.msg("GOpacker: did "+ct+
-						  " passes, l2-error = "+goPack.myPLiteError);
-				  return ct;
-			  }
-			  
-			  Iterator<Vector<String>> its=flagSegs.iterator();
-			  while (its.hasNext()) {
-				  items=its.next();
-				  String str=items.get(0);
-				  if (StringUtil.isFlag(str)) {
-					  items.remove(0);
-					  c=str.charAt(1);
-					  switch(c) {
-					  
-					  // specified "interior" (versus default to usual interior)
-					  case 'v': 
-					  {
-						  if (goPack.mode!=GOpacker.NOT_YET_SET) {
-							  CirclePack.cpb.msg("GOpack can set vertices "
-							  		+ "only on initialization");
-							  return 0;
-						  }
-						  
-					  }
-					  
-					  // set all radii to 1, do no riffles yet
-					  case 's':
-					  {
-						  goPack.startRiffle();
-						  CirclePack.cpb.msg("GOpack is initialized, "
-						  		+ "constant radii, no cycles yet");
-						  return 1;
-					  }
-					  
-					  // continue with another batch of repacking, 'n' passes
-					  case 'c':
-					  {
-						  if (gotflag)
-							  break;
-						  gotflag=true;
-						  gotc=c;
-						  if (items.size()>0) { // passes specified?
-							  try {
-								  passes=Integer.parseInt(items.get(0));
-							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: "
-								  		+ "-n {n}, n iterations");
-							  }
-						  }
-						  break;
-					  }
-					  
-					  // 'restart', meaning start with the parent radii 
-					  case 'r':
-					  {
-						  if (gotflag)
-							  break;
-						  gotflag=true;
-						  gotc=c;
-						  if (items.size()>0) { // passes specified?
-							  try {
-								  passes=Integer.parseInt(items.get(0));
-							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: "
-								  		+ "-n {n}, n iterations");
-							  }
-						  }
-						  break;
-					  }
-					  
-					  // max packing
-					  case 'm': 
-					  {
-						  if (gotflag) // preempted?
-							  break;
-						  gotflag=true;
-						  gotc=c;
-						  goPack.setCorners(null,null); // null corner info; mode to MAX_PACK
-						  goPack.setMode(GOpacker.MAX_PACK); // default
-						  
-						  // Is this a sphere? then handled with 
-						  // a punctured face; set bdry rad/centers 
-						  // (if there are 3 bdry verts)
-						  if (goPack.setSphBdry()>0) 
-							  goPack.setMode(GOpacker.FIXED_BDRY);
-							  
-						  if (items.size()>0) { // passes specified?
-							  try {
-								  passes=Integer.parseInt(items.get(0));
-							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: "
-								  		+ "-n {n}, n iterations");
-							  }
-						  }
-						  break;
-					  }
-					  
-					  // harmonic layout, i.e., fixed boundary radii/centers
-					  case 'h':
-					  {
-						  if (gotflag) // preempted?
-							  break;
-						  if (packData.hes!=0)
-							  throw new ParserException("GOpack usage: "
-							  		+ "-h is only for euclidean packings");
-						  gotflag=true;
-						  gotc=c;
-						  goPack.setMode(GOpacker.FIXED_BDRY);
-						  
-						  if (items.size()>0) { // passes specified?
-							  try {
-								  passes=Integer.parseInt(items.get(0));
-							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: "
-								  		+ "-n {n}, n iterations");
-							  }
-						  }
-						  break;
-					  }
-					  // give 3 or more corners for polygonal packing; 
-					  //     get 'passes' via -n flag
-					  case 'b': 
-					  {
-						  int n=0;
-						  try {
-							  n=Integer.parseInt(str.substring(2));
-							  if (n<3)
-								  throw new ParserException("GOpack: usage "
-								  		+ "-c {v1 v2 v3 ..}. Must be at least 3 "
-								  		+ "corner verts");
-							  int []pCorners=new int[n];
-							  double []pAngles=null;
-							  int m=items.size();
-							  NodeLink crns=null;
-							  if (m==1) { // must be something like 'Vlist'
-								  crns=new NodeLink(packData,items);
-								  if (crns!=null) {
-									  m=crns.size();
-									  if (m!=n)
-										  throw new ParserException("GOpack usage: "
-										  		+ "corner specification error");
-									  for (int i=0;i<m;i++)
-										  pCorners[i]=crns.get(i);
-								  }
-							  }
-							  else if (m<n)
-								  throw new ParserException("GOpack usage -c problem");
-
-							  else {  // read n corner vertices and (possibly) n angles
-
-								  for (int i=0;i<n;i++) 
-									  pCorners[i]=Integer.parseInt(items.get(i));
-								  // read n corner interior angles theta/pi 
-								  //     (default to pi-2pi/n)
-								  if (m>n) {
-									  if (m<2*n)
-										  throw new ParserException("GOpack usage "
-										  		+ "-c problem");
-									  pAngles=new double[n];
-									  for (int i=0;i<n;i++)
-										  pAngles[i]=Double.parseDouble(items.get(n+i));
-								  }
-							  }
-							  
-							  // set corner data up, mode to POLY_PACK
-							  count +=goPack.setCorners(pCorners,pAngles);
-							  
-						  } catch (Exception ex) {
-							  throw new ParserException("GOpack: usage -c, "
-							  		+ "failure to read corner vert");
-						  }
-						  count++;
-						  break;
-					  }
-
-					  case 'l': // testing bdry layout
-					  {
-						  if (gotflag)
-							  break;
-						  gotflag=true;
-						  gotc=c;
-						  break;
-					  }
-					  // get 'passes'
-					  case 'n':
-					  {
-						  try {
-							  passes=Integer.parseInt(items.get(0));
-						  } catch (Exception ex) {
-							  throw new ParserException("GOpack usage: "
-							  		+ "-n {n}, n iterations");
-						  }
-						  count++;
-						  break;
-					  }
-
-					  // print the l2 quality
-					  case 'q':
-					  {
-						  double results=goPack.l2quality(.001);
-						  CirclePack.cpb.msg("GOpack quality result: "+results);
-						  count++;
-						  break;
-					  }
-					  
-					  // close the GOpacker
-					  case 'x':
-					  {
-						  if (packData.rePacker!=null) {
-							  double results=goPack.l2quality(.001);
-							  CirclePack.cpb.msg("exiting 'GOpack', last "
-							  		+ "quality reading: "+results);
-							  packData.rePacker=null;
-						  }
-						  return 1;
-					  }
-					  
-					  // status of packer?
-					  case '?':
-					  {
-						  CirclePack.cpb.msg(goPack.getStatus());
-						  break;
-					  }
-
-					  } // end switch
-				  }
-
-				  else { // no flags, only thing here should be 'passes'
-					
-					  try {
-						  passes=Integer.parseInt(items.get(0));
-					  } catch(Exception ex) {
-						  passes=defaultPasses;
-					  }
-				  }
-				  
-			  } // end of while through flag sequences
-			  
-			  if (gotflag) {
-				  switch(gotc) {
-				  case 'r':
-				  {
-					  count+=goPack.reStartRiffle(passes);
-					  CirclePack.cpb.msg("GOpack restarted using data "
-					  		+ "from the packing, "+count+" cycles");
-					  break;
-				  }
-				  case 'm':
-				  {
-					  count+=goPack.continueRiffle(passes);
-					  CirclePack.cpb.msg("GOpack continued for max packing, "+
-							  count+" cycles");
-					  break;
-				  }
-				  case 'c':
-				  {
-					  count+=goPack.continueRiffle(passes);
-					  CirclePack.cpb.msg("GOpack continued with its own data, "+count+" cycles");
-					  break;
-				  }
-				  case 'h': // do harmonic layout
-				  {
-					  count += goPack.layoutCenters();
-					  CirclePack.cpb.msg("GOpack: harmonic layout of local "
-					  		+ "'centers' based on bdry and 'radii'");
-					  break;
-				  }
-				  case 'l': // layout boundary only
-				  {
-					  count +=goPack.layoutBdry();
-					  goPack.reapResults();
-					  break;
-				  }
-				  } // end of switch
-			  }
-
-			  return count;
-		  }
 	      break;
 	  } // end of 'g'
 	  case 'h':
@@ -3183,10 +2856,16 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("polyp")) {
 	    	  int ccount=0;
 	    	  boolean useC=true;
-	    	  if (items.get(0).equals("-o"))
+	    	  if (items.size()>0 && items.get(0).equals("-o"))
 	    		  useC=false;
-	    	  NodeLink clink=new NodeLink(packData,items);
+	    	  
+	    	  // find corners; TODO, currently expect 4
+	    	  NodeLink clink=null;
+	    	  if (items!=null && items.size()>3)
+	    		  clink=new NodeLink(packData,items);
 	    	  try {
+	    		  if (clink==null || clink.size()<4)
+	    			  clink=EuclPacker.randomBdryCorners(packData, 4);
 	    		  Iterator<Integer> clk=clink.iterator();
 	    		  while (clk.hasNext()) {
 	    			  if (!packData.isBdry(clk.next()))
@@ -3280,6 +2959,8 @@ public class CommandStrParser {
 		  }
 		  
 		  // =========== rand_tri =========
+		  // (helper 'gammaToGraphXY' just below is used only by this command,
+		  // to bridge to GOPackNative.computeRandomTri for large regions)
 		  if (cmd.startsWith("rand_tri") || cmd.startsWith("random_tri")) {
 			  boolean seed1=false; // true for debug so random seed is not called
 			  int randN=200;
@@ -3336,13 +3017,14 @@ public class CommandStrParser {
 						  case 'g': // using a path: either default or 'filename'
 						  {
 							  if (CPBase.ClosedPath!=null) 
-								  Gamma=CPBase.ClosedPath;
-							  try {
+								  Gamma=CPBase.ClosedPath; // Gamma=null;
+							  // hope to read from a file
+							  if (Gamma==null) {
+								  boolean script=false;
 								  if (str.length()>2 && str.charAt(2)=='s') // from script
-									  Gamma=PathManager.readpath(StringUtil.reconItem(items),true); 
-								  else
-									  Gamma=PathManager.readpath(StringUtil.reconItem(items),false);
-							  } catch (Exception ex) {
+									  script=true;
+								  String reconStr=StringUtil.reconItem(items);
+								  Gamma=PathManager.readpath(reconStr,script); 
 							  }
 							  if (Gamma==null) {
 								  throw new ParserException("usage: -g[s] <filename>");
@@ -3423,23 +3105,72 @@ public class CommandStrParser {
 				  heS=-1;
 			  }
 			  else {
-				  Triangulation Tri=RandomTriangulation.random_Triangulation(randN,seed1,
-						  heS,aspect,Gamma,Tau);
-				  if (Tri==null) {
-					  throw new CombException("random_Triangulation failed");
+				  // GOPack's raw (never-riffled) generators cover every shape
+				  // here except torus: an arbitrary closed curve (includes
+				  // the unit disc, whether via explicit '-u' or a '-g' path),
+				  // a rectangle ('-A'), or the sphere ('-S'). Precedence
+				  // mirrors 'RandomTriangulation.random_Triangulation' itself
+				  // (Tau > Gamma > Aspect > sphere), so the shape picked here
+				  // always matches what the Java fallback below would have
+				  // built for the same flags. Falls through to that pure-Java
+				  // path on failure, small count, torus, or GOPack being
+				  // unavailable.
+				  //
+				  // 'result.centersRe'/'centersIm' are meaningful raw
+				  // euclidean working values for every shape, including the
+				  // sphere -- 'GORandom.buildPackData' already applies the
+				  // right per-geometry conversion (same e_to_s_data call used
+				  // when converting any other GOPack spherical result), so it
+				  // covers all four generators here with no special-casing.
+				  if (Tau==null && randN>RePacker.GOPACK_THRESHOLD
+						  && CPBase.gopackAvailable()) {
+					  try {
+						  if (Gamma!=null) { // curve-bounded region, incl. unit disc
+							  double[] graphXY=gammaToGraphXY(Gamma);
+							  if (graphXY!=null) {
+								  int bdryN=(int)(4.0*Math.sqrt((double)randN));
+								  RandomComplexResult result=GOPackNative.computeRandomTri(
+										  randN,bdryN,graphXY,0.0,0.0,false);
+								  randPack=GORandom.buildPackData(result);
+							  }
+						  }
+						  else if (aspect>0.0) { // rectangle (square is aspect==1.0)
+							  RandomComplexResult result=GOPackNative.computeRandomRectangle(
+									  randN,aspect,-1);
+							  randPack=GORandom.buildPackData(result);
+						  }
+						  else if (heS>0) { // sphere
+							  RandomComplexResult result=GOPackNative.computeRandomSphere(randN);
+							  randPack=GORandom.buildPackData(result);
+						  }
+						  if (randPack!=null)
+							  heS=randPack.hes;
+					  } catch (GOPackException gpe) {
+						  System.err.println("GOPack random_tri generation failed, falling "+
+								  "back to Java routine: "+gpe.getMessage());
+						  randPack=null;
+					  }
 				  }
-				  
-				  try {
-					  randPack=Triangulation.tri_to_Complex(Tri,heS);
-					  if (randPack==null) {
-						  throw new CombException("'tri_to_Complex' failed");
+
+				  if (randPack==null) {
+					  Triangulation Tri=RandomTriangulation.random_Triangulation(randN,seed1,
+							  heS,aspect,Gamma,Tau);
+					  if (Tri==null) {
+						  throw new CombException("random_Triangulation failed");
 					  }
 
-					  // "prune" the packing
-					  CombDCEL.pruneDCEL(randPack.packDCEL);
-					  randPack.packDCEL.fixDCEL(randPack);
-				  } catch (Exception ex) {
-					  throw new DataException("tri_to_Complex failed: "+ex.getMessage());
+					  try {
+						  randPack=Triangulation.tri_to_Complex(Tri,heS);
+						  if (randPack==null) {
+							  throw new CombException("'tri_to_Complex' failed");
+						  }
+
+						  // "prune" the packing
+						  CombDCEL.pruneDCEL(randPack.packDCEL);
+						  randPack.packDCEL.fixDCEL(randPack);
+					  } catch (Exception ex) {
+						  throw new DataException("tri_to_Complex failed: "+ex.getMessage());
+					  }
 				  }
 			  }
 			  
@@ -3520,6 +3251,81 @@ public class CommandStrParser {
 
 						  CirclePack.cpb.msg("Created a random packing in the disc with "+packData.nodeCount
 								  +" vertices");
+						  return packData.nodeCount;
+					  }
+				  } catch (Exception ex) {}
+			  } // end of for loop 
+			  
+			  // failed several times?
+			  throw new ParserException("Random triangulation failed 12 times; try more vertices.");
+		  }
+		  
+		  // =========== random_disc =======
+		  if (cmd.startsWith("random_disc")) { // random hyperbolic disc packing;
+			  // GOPack-backed for large counts, dedicated from 'random_pack'
+			  // so the existing Java-only command stays untouched.
+			  boolean seed1=false;
+			  int randN=200;
+			  try { // see if count is given
+				  String str=(String)items.get(0);
+				  if (str.startsWith("-d")) {
+					  seed1=true;
+					  items.remove(0);
+					  str=items.get(0);
+				  }
+				  randN=Integer.parseInt(str);
+				  if (randN<4) 
+					  randN=200;
+			  } catch (Exception ex) {
+				  randN=200;
+			  }
+			  
+			  PackData randPack=null;
+			  
+			  // for large counts, hand generation AND packing entirely to
+			  // GOPack in one native call; falls through to the Java routine
+			  // below on failure, small count, or GOPack being unavailable.
+			  if (randN>RePacker.GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+				  try {
+					  RandomComplexResult result=GOPackNative.computeRandomDisc(randN,0);
+					  randPack=GORandom.buildPackData(result);
+				  } catch (GOPackException gpe) {
+					  System.err.println("GOPack random_disc failed, falling back "+
+							  "to Java routine: "+gpe.getMessage());
+					  randPack=null;
+				  }
+			  }
+			  
+			  if (randPack!=null) { // GOPack path succeeded; already packed
+				  int pnum=packData.packNum;
+				  packData=CirclePack.cpb.swapPackData(randPack,pnum,false);
+				  packData.packDCEL.fixDCEL(packData);
+				  
+				  CirclePack.cpb.msg("Created a random disc packing (GOPack) with "+
+						  packData.nodeCount+" vertices");
+				  return packData.nodeCount;
+			  }
+			  
+			  // Java fallback: build combinatorics, then pack via 'max_pack'
+			  // (mirrors the existing 'random_pack' command's own logic)
+			  for (int j=0;j<12;j++) { 
+				  try {
+					  if ((randPack=RandomTriangulation.randomHypKomplex(
+							  randN,seed1))!=null) {
+						  
+						  // choose alpha far from boundary
+						  int da=randPack.gen_mark(new NodeLink(randPack,"b"),-1,false);
+						  if (da>0)
+							  randPack.setAlpha(da);
+						  
+						  // put new packing in place
+						  int pnum=packData.packNum;
+						  packData=CirclePack.cpb.swapPackData(randPack,pnum,false);
+						  packData.packDCEL.fixDCEL(packData);
+						  jexecute(packData,"max_pack 2000");
+						  
+						  CirclePack.cpb.msg("Created a random disc packing (Java) with "+
+								  packData.nodeCount+" vertices");
 						  return packData.nodeCount;
 					  }
 				  } catch (Exception ex) {}
@@ -5162,6 +4968,55 @@ public class CommandStrParser {
   } // end of main switch for jexecute
   return count;
  } // end of jexecute
+
+  /**
+   * Set true once GOPack-cpp exposes a no-repack/raw-layout variant of
+   * 'computeRandomTri' (i.e. random Delaunay combinatorics + raw positions,
+   * no maximal-packing riffle) -- see HANDOFF-random-tri-no-repack.md. Until
+   * then, 'GOPackNative.computeRandomTri' itself always riffles to a
+   * maximal packing, which doesn't preserve the seed region's shape and so
+   * doesn't fit the shape-preserving contract of 'rand_tri''s general
+   * (Gamma/Aspect) branch; leave this false so that branch stays on the
+   * existing Java routine.
+   */
+
+  /**
+   * Flatten a closed 'Gamma' path into a boundary-polygon coordinate list
+   * (x0,y0,x1,y1,...) suitable for
+   * {@link JNI.GOPackNative#computeRandomTri}'s 'graphXY' parameter -- the
+   * same polygonal approximation 'RandomTriangulation.rand_bdry_pts' uses
+   * internally to place random points along a possibly-curved path, but
+   * with the closing repeat of the first point dropped (GOPack's 'graphXY'
+   * must not repeat the first point at the end). Used only by the
+   * 'rand_tri'/'random_tri' command, to bridge to GOPack for large regions.
+   * @param gpath Path2D.Double, closed
+   * @return double[], even length &gt;= 6, or null if 'gpath' doesn't
+   *         resolve to at least 3 distinct vertices
+   */
+  private static double[] gammaToGraphXY(Path2D.Double gpath) {
+	  double flatness=PathUtil.gpExtent(gpath)*PathUtil.FLAT_FACTOR;
+	  Vector<Vector<Complex>> polyGamma=PathUtil.gpPolygon(gpath,flatness);
+	  if (polyGamma==null || polyGamma.size()==0)
+		  return null;
+	  Vector<Complex> poly=polyGamma.get(0);
+	  int n=poly.size();
+	  // drop a trailing point that just repeats the first (closing) point
+	  if (n>=2) {
+		  Complex first=poly.get(0);
+		  Complex last=poly.get(n-1);
+		  if (Math.abs(last.x-first.x)<1e-10 && Math.abs(last.y-first.y)<1e-10)
+			  n--;
+	  }
+	  if (n<3)
+		  return null;
+	  double[] graphXY=new double[2*n];
+	  for (int i=0;i<n;i++) {
+		  Complex z=poly.get(i);
+		  graphXY[2*i]=z.x;
+		  graphXY[2*i+1]=z.y;
+	  }
+	  return graphXY;
+  }
   
   
   /**

@@ -3,11 +3,16 @@ package rePack;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import JNI.GOPackException;
+import JNI.GOPackNative;
+import allMains.CPBase;
 import allMains.CirclePack;
 import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
+import complex.Complex;
 import dcel.PackDCEL;
+import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.PackingException;
 import exceptions.ParserException;
@@ -585,9 +590,10 @@ public class EuclPacker extends RePacker {
     }
     
     /**
-     * Pack as euclidean to form a polygon with equal corner angles.
-     * Normalize so the edge from first to second corners 
-     * is horizontal (right to left).
+     * Pack as euclidean to form a polygon with 
+     * equal corner angles. Normalize so the edge 
+     * from first to second corners is horizontal 
+     * (right to left).
      * @param p PackData, 
      * @param crns NodeLink
      * @return
@@ -604,32 +610,57 @@ public class EuclPacker extends RePacker {
     	CommandStrParser.jexecute(p,"geom_to_e");
   	  	p.set_aim_default();
   	  	
+		// for large rectangle packings, hand corners+angles straight to
+		// GOPack's polygonal mode; only the 4-corner (rectangle) case is
+		// wired up so far -- see POLYGON_JNI_HANDOFF.md for why arbitrary
+		// polygons are held off for now.
+		if (okayC && n==4 && p.nodeCount>=GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+			try {
+				int[][] bouquet=p.getBouquet();
+				int[] corners=new int[n];
+				double[] cangles=new double[n];
+				double eqAngle=1.0-2.0/((double)n); // in units of pi, e.g. 0.5 for a rectangle
+				for (int i=0;i<n;i++) {
+					corners[i]=crns.get(i);
+					cangles[i]=eqAngle;
+				}
+				double[][] result=GOPackNative.computePolygonalPackingFromComplex(
+						p.nodeCount,bouquet,0,corners,cangles,20); // geometry=0: eucl
+				double[] radii=result[0];
+				double[] centerX=result[1];
+				double[] centerY=result[2];
+
+				// polygonal mode is inherently euclidean -- GOPack's raw
+				// working values need no hyp/sph conversion here.
+				for (int k=1;k<=p.nodeCount;k++) {
+					p.setCenter(k,new Complex(centerX[k],centerY[k]));
+					p.setRadius(k,radii[k]);
+				}
+				p.setGeometry(0);
+				CommandStrParser.jexecute(p,"norm_scale -u "+v);
+				CommandStrParser.jexecute(p,"norm_scale -h "+v+" "+w);
+				return 1;
+			} catch (GOPackException gpe) {
+				System.err.println("GOPack polygonal packing failed, falling back "+
+						"to Java routine: "+gpe.getMessage());
+				// fall through to traditional java routine below
+			}
+		}
+
   	  	// use traditional java packing routine calls; 
-  	  	// Note that old C calls are no longer used 
-  	  	if (!okayC || p.nodeCount<GOPACK_THRESHOLD) {
-  	  		
-  	  		// set the aims
-  	  	  	CommandStrParser.jexecute(p,"set_aim 1.0 b");
-  	  	  	double angles=1-2.0/((double)n);
-  	  	  	StringBuilder strbld=new StringBuilder("set_aim "+angles+" ");
-  	  	  	for (int i=0;i<n;i++)
-  	  	  		strbld.append(crns.get(i)+" ");
-  	  	  	CommandStrParser.jexecute(p,strbld.toString());
-  	  	  	
-  	  		CommandStrParser.jexecute(p,"repack 1000");
-  	  		CommandStrParser.jexecute(p,"layout");
-  	  		CommandStrParser.jexecute(p,"norm_scale -u "+v);
-  	  		CommandStrParser.jexecute(p,"norm_scale -h "+v+" "+w);
-  	  		return 1;
-  	  	}
-  	  	
-  	  	// from command
-  	  	StringBuilder strbld=new StringBuilder("GOpack -b"+n+" ");
-  	  	for (int i=0;i<n;i++) 
+  	  	// set the aims
+  	  	CommandStrParser.jexecute(p,"set_aim 1.0 b");
+  	  	double angles=1-2.0/((double)n);
+  	  	StringBuilder strbld=new StringBuilder("set_aim "+angles+" ");
+  	  	for (int i=0;i<n;i++)
   	  		strbld.append(crns.get(i)+" ");
-  	  	
   	  	CommandStrParser.jexecute(p,strbld.toString());
-  	  	return CommandStrParser.jexecute(p,"GOpack -c 30");
+  	  	
+  	  	CommandStrParser.jexecute(p,"repack 1000");
+  	  	CommandStrParser.jexecute(p,"layout");
+  	  	CommandStrParser.jexecute(p,"norm_scale -u "+v);
+  	  	CommandStrParser.jexecute(p,"norm_scale -h "+v+" "+w);
+  	  	return 1;
     }
   	
 	/**
@@ -656,9 +687,9 @@ public class EuclPacker extends RePacker {
 	 * Note: This code could serve as base for an arbitrary precision version in
 	 * future.
 	 * 
-	 * @param p         PackData
+	 * @param p PackData
 	 * @param direction int: -1 down only, -2 down/up, 1 up only, 2 up/down
-	 * @param passes    int, maximal number of full passes
+	 * @param passes int, maximal number of full passes
 	 * @return double[]: [0]<0 on failure.
 	 */
 	public static double[] euclPerron(PackData p, int direction, int passes) {
@@ -914,6 +945,24 @@ public class EuclPacker extends RePacker {
 			results[1] = Math.sqrt(discrepency);
 		results[3] = sqError;
 		return results;
+	}
+	
+	/**
+	 * Find n roughly equally spaced boundary vertices
+	 * @param pd PackData
+	 * @param n int, n>=3
+	 * @return int[]
+	 */
+	public static NodeLink randomBdryCorners(PackData pd,int n) {
+		NodeLink blink=new NodeLink(pd,"b");
+		int length=blink.size();
+		if (n<3 || length<4*n)
+			throw new CombException("problem choosing "+n+" boundary points");
+		int segs=(int)(length/n);
+		NodeLink corners=new NodeLink(pd);
+		for (int j=0;j<n;j++)
+			corners.add(blink.get(j*segs));
+		return corners;
 	}
 	
 	/**
