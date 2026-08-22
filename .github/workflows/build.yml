@@ -12,13 +12,14 @@ jobs:
     # windows/macos/linux build matrix: this repo doesn't compile any native
     # code itself. The three platform binaries the jar needs
     # (cdeps/win64/gopack_jni.dll, cdeps/macos/libgopack_jni.dylib,
-    # cdeps/linux64/libgopack_jni.so) are already checked into the repo --
-    # maven-assembly-plugin's circlepack.xml descriptor just sweeps whatever
-    # is already sitting in cdeps/ into the jar, whatever OS runs "mvn
-    # package". If GOPack-cpp's own build.yml ever stops checking freshly
-    # built binaries back into this repo's cdeps/, this job will keep
-    # silently packaging whatever is currently committed there -- it does
-    # not rebuild them itself.
+    # cdeps/linux64/libgopack_jni.so) are fetched fresh from GOPack-cpp's
+    # rolling "latest" GitHub Release on every CI run (see the "Fetch latest
+    # GOPack-cpp native libraries" step below) before maven-assembly-plugin's
+    # circlepack.xml descriptor sweeps cdeps/ into the jar. The copies
+    # checked into the repo are only a fallback for offline/local `mvn
+    # package` runs -- this job always overwrites them with whatever
+    # GOPack-cpp's master branch currently builds, and does not commit the
+    # refreshed files back.
     steps:
       - uses: actions/checkout@v4
 
@@ -57,6 +58,42 @@ jobs:
               -DgroupId=local -DartifactId=FunctionParser -Dversion=1.0 -Dpackaging=jar
           mvn -B install:install-file -Dfile=jars/xercesImpl.jar \
               -DgroupId=local -DartifactId=xercesImpl -Dversion=1.0 -Dpackaging=jar
+
+      # Pulls the current GOPack-cpp binaries down from that repo's rolling
+      # "latest" GitHub Release and drops them into cdeps/, overwriting
+      # whatever is checked in, so this jar always packages GOPack-cpp's
+      # current master build. Both repos are public, so `gh` (preinstalled
+      # on GitHub-hosted runners) can download the release assets
+      # anonymously -- ${{ github.token }} is only supplied because `gh`
+      # wants some authenticated context to run under; it does not need any
+      # special permission on GOPack-cpp to read a public release. This
+      # fetch is transient: nothing here is committed back to the repo, so a
+      # local `mvn package` still falls back to whatever is checked into
+      # cdeps/ until someone updates it by hand.
+      - name: Fetch latest GOPack-cpp native libraries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          rm -rf /tmp/gopack-cpp-assets
+          mkdir -p /tmp/gopack-cpp-assets
+          gh release download latest \
+            --repo kensmath/GOPack-cpp \
+            --dir /tmp/gopack-cpp-assets \
+            --pattern '*.zip' \
+            --clobber
+
+          mkdir -p cdeps/win64 cdeps/macos cdeps/linux64
+          unzip -oq /tmp/gopack-cpp-assets/gopack-cpp-windows-x64.zip -d /tmp/gopack-cpp-assets/windows-x64
+          unzip -oq /tmp/gopack-cpp-assets/gopack-cpp-macos-universal.zip -d /tmp/gopack-cpp-assets/macos-universal
+          unzip -oq /tmp/gopack-cpp-assets/gopack-cpp-linux-x64.zip -d /tmp/gopack-cpp-assets/linux-x64
+
+          cp /tmp/gopack-cpp-assets/windows-x64/gopack_jni.dll cdeps/win64/gopack_jni.dll
+          cp /tmp/gopack-cpp-assets/macos-universal/libgopack_jni.dylib cdeps/macos/libgopack_jni.dylib
+          cp /tmp/gopack-cpp-assets/linux-x64/libgopack_jni.so cdeps/linux64/libgopack_jni.so
+
+          echo "Fetched GOPack-cpp binaries (latest release):"
+          ls -la cdeps/win64 cdeps/macos cdeps/linux64
 
       # Runs the full "package" phase: compiles src/main/java, runs the
       # exec-maven-plugin Info2HTML generation step, then builds all three
