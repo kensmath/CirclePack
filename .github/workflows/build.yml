@@ -95,14 +95,34 @@ jobs:
           echo "Fetched GOPack-cpp binaries (latest release):"
           ls -la cdeps/win64 cdeps/macos cdeps/linux64
 
+      # pom.xml's <version> is ${revision}, defaulting to a fixed property --
+      # there's no automatic version bump. A release build is triggered by
+      # pushing a git tag like "v6.1.0" (the existing bare "on: push:"
+      # trigger above already covers tag pushes, not just branches), and
+      # *only* that case overrides the default by passing -Drevision on the
+      # Maven command line, stripped of the tag's leading "v". Every other
+      # trigger (regular branch pushes, PRs, workflow_dispatch) leaves
+      # REVISION_ARG empty, so `mvn package` falls back to pom.xml's default
+      # <revision> and nothing about ordinary CI runs changes.
+      - name: Determine build version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            echo "Tag push detected -- building version $version"
+            echo "REVISION_ARG=-Drevision=$version" >> "$GITHUB_ENV"
+          else
+            echo "Not a version tag -- using pom.xml's default <revision>"
+            echo "REVISION_ARG=" >> "$GITHUB_ENV"
+          fi
+
       # Runs the full "package" phase: compiles src/main/java, runs the
       # exec-maven-plugin Info2HTML generation step, then builds all three
-      # maven-assembly-plugin jars (CirclePack-<version>.jar, ScriptLister.jar,
+      # maven-assembly-plugin jars (CirclePack-v<version>.jar, ScriptLister.jar,
       # Info2HTML.jar) into target/. Each already bundles its own
-      # dependencies and (for CirclePack-<version>.jar) the native libs from
+      # dependencies and (for CirclePack-v<version>.jar) the native libs from
       # cdeps/, so nothing further is needed to make them runnable.
       - name: Package with Maven
-        run: mvn -B package
+        run: mvn -B package $REVISION_ARG
 
       - name: List built jars
         run: ls -la target/*.jar
@@ -116,3 +136,35 @@ jobs:
             target/ScriptLister.jar
             target/Info2HTML.jar
           if-no-files-found: error
+
+  # Publishes a permanent, versioned GitHub Release -- unlike GOPack-cpp's
+  # rolling "latest" release, this one is per-tag and never overwritten:
+  # each pushed "vX.Y.Z" tag gets its own release, so old versions stay
+  # downloadable indefinitely. Only runs for tag pushes (the "build" job
+  # above still runs, and still uploads the ephemeral workflow-run artifact,
+  # for every push/PR/dispatch as before). Reuses the jars "build" already
+  # produced rather than rebuilding, so the release always contains exactly
+  # what the build job tested and packaged.
+  release:
+    name: Publish tagged release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built jars
+        uses: actions/download-artifact@v4
+        with:
+          name: circlepack-jars
+          path: jars
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh release create "$GITHUB_REF_NAME" jars/*.jar \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "CirclePack $GITHUB_REF_NAME" \
+            --generate-notes
