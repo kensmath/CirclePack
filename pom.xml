@@ -367,8 +367,16 @@
                                     <Class-Path>.</Class-Path>
                                 </manifestEntries>
                             </archive>
+                            <!-- Matches the actual on-disk filename "info2HTML.xml"
+                                 (lowercase "info2", uppercase "HTML"). Windows'
+                                 filesystem is case-insensitive so a mismatched
+                                 reference like "Info2HTML.xml" builds fine locally,
+                                 but GitHub Actions' ubuntu-latest runner uses a
+                                 case-sensitive filesystem and fails with
+                                 "Error locating assembly descriptor" if the case
+                                 doesn't match exactly. -->
                             <descriptors>
-                                <descriptor>src/assembly/Info2HTML.xml</descriptor>
+                                <descriptor>src/assembly/info2HTML.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>
