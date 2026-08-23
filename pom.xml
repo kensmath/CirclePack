@@ -169,6 +169,39 @@
             </plugin>
 
             <!-- ============================================================
+                 AF>>>
+                 Disable Maven's DEFAULT jar build. With <packaging>jar</packaging>
+                 above, maven-jar-plugin is implicitly bound to a "default-jar"
+                 execution in the "package" phase whether or not anything below
+                 asks for it - it just packages this project's own compiled
+                 classes (target/classes) with no dependencies, no native libs,
+                 and no Main-Class, into CirclePack-${revision}.jar. Nobody
+                 references that artifact anywhere in this pom, but it still
+                 lands in target/ right next to CirclePack-v${revision}.jar
+                 (the actual runnable, fully self-contained app built by the
+                 assembly plugin below) - two near-identically-named jars, one
+                 real, one an inert build byproduct, both then swept up by the
+                 release workflow's "target/CirclePack-*.jar" glob and
+                 published to GitHub Releases together, which is exactly what
+                 caused the confusion. Rebinding "default-jar" to phase "none"
+                 (Maven's documented way to opt out of a default-bound
+                 execution) stops it from running at all - CirclePack-${revision}.jar
+                 (no "v") no longer gets built, locally or in CI, so there's
+                 nothing left to accidentally publish.
+                 <<<AF
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ============================================================
                  2. PRE-PACKAGE CODE GENERATOR
                     Mirrors the "cpjar" target's: java classname="infoProcessing.Info2HTML" dir=".."
 

@@ -168,3 +168,57 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "CirclePack $GITHUB_REF_NAME" \
             --generate-notes
+
+  # Publishes a rolling, always-overwritten "beta" pre-release from the tip
+  # of ordinary pushes to 'master' - separate from the "release" job above,
+  # which only fires on a version tag and produces a permanent, versioned
+  # release. Between actual version bumps there are often several
+  # intermediate pushes that are working (not broken) but not yet called a
+  # "release" - this gives that in-between state a fixed, always-current
+  # download link, the same rolling-release pattern GOPack-cpp already uses
+  # for its own "latest" release (see the "Fetch latest GOPack-cpp native
+  # libraries" step above).
+  #
+  # The main jar is renamed to the fixed name "CirclePack-beta.jar" before
+  # upload: since pom.xml's <revision> only changes by hand between real
+  # releases, an un-renamed build here would often produce a jar with the
+  # exact same filename as the last numbered release's jar (e.g. still
+  # "CirclePack-v6.1.2.jar" on every push until someone bumps <revision>),
+  # which would be confusing sitting in this pre-release and easy to
+  # mistake for the real, numbered thing.
+  beta:
+    name: Publish rolling beta build
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built jars
+        uses: actions/download-artifact@v4
+        with:
+          name: circlepack-jars
+          path: jars
+
+      - name: Rename main jar to CirclePack-beta.jar
+        run: |
+          set -e
+          main_jar=$(ls jars/CirclePack-v*.jar)
+          mv "$main_jar" jars/CirclePack-beta.jar
+
+      - name: Publish rolling beta release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          # Remove any previous "beta" release and its tag first, so this
+          # always replaces the last one instead of accumulating a history
+          # of them. Fails harmlessly the first time there's nothing to
+          # delete yet.
+          gh release delete beta --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create beta jars/*.jar \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "CirclePack beta (latest master)" \
+            --notes "Automatically built from the latest push to master (commit $GITHUB_SHA). Not a numbered release - may be unstable." \
+            --prerelease
