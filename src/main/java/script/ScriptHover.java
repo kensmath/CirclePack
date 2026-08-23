@@ -1,6 +1,8 @@
 package script;
 
 import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.Point;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
@@ -105,6 +107,30 @@ public class ScriptHover extends HoverPanel {
 		this.add(scriptPanel);
 		PackControl.scriptBar.swapScriptBar(true);
 		this.add(stackScroll);
+	}
+
+	/**
+	 * Opening the Script window (via 'HoverPanel.lockframe') packs and
+	 * shows 'lockedFrame' for the first time; as part of that, Swing's
+	 * focus machinery can request focus for some component buried in
+	 * the script display, which drags the scroll pane away from the
+	 * top before the user ever sees it. Lock the viewport for the
+	 * whole open sequence, then release it and force the scroll back
+	 * to the top once things have settled.
+	 */
+	@Override
+	public void lockframe() {
+		//AF>>>//
+		LockableJViewport viewport = (LockableJViewport) stackScroll.getViewport();
+		viewport.setLocked(true);
+		super.lockframe();
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				viewport.setLocked(false);
+				viewport.setViewPosition(new Point(0,0));
+			}
+		});
+		//<<<AF//
 	}
 	
 	/**

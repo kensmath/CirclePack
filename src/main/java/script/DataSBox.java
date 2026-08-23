@@ -124,8 +124,25 @@ public class DataSBox extends StackBox {
 	
 	public void open() {
 		if (isOpen) return;
+
+		//AF>>>//
+		// Lock the viewport so GUI changes don't jitter and relocate.
+		((LockableJViewport) PackControl.scriptHover.stackScroll.getViewport()).setLocked(true);
+		//<<<AF//
+
 		isOpen=true;
 		manager.repopulateRecurse(tNode);
+
+		//AF>>>//
+		// Unlock the viewport and scroll so the newly-revealed included
+		// files (this box sits at the bottom of the script) come into view.
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				((LockableJViewport) PackControl.scriptHover.stackScroll.getViewport()).setLocked(false);
+				setViewRect();
+			}
+		});
+		//<<<AF//
 	}
 	
 	/**

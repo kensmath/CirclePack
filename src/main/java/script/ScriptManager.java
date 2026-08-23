@@ -3,7 +3,6 @@ package script;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.EventQueue;
-import java.awt.Frame;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
