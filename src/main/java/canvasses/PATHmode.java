@@ -46,6 +46,11 @@ public class PATHmode extends MyCanvasMode {
 			mH.polygonalPath.lineTo(pt2D.x,pt2D.y);
 			cpS.drawPath(mH.polygonalPath);
 		}
+		//AF>>>//
+		// Show the segment just added instead of waiting for
+		// the path to close.
+		rePaint(aW);
+		//<<<AF//
 	}
 	
 	public void pressed3(ActiveWrapper aW,MouseEvent e) {} // override
@@ -73,10 +78,21 @@ public class PATHmode extends MyCanvasMode {
 	
 	
 	public void released3(ActiveWrapper aW,MouseEvent e) {} // override
-	
-	public int dragged(ActiveWrapper aW,Point point) { // override
+
+	//AF>>>//
+	// NOTE: the base class declares 'dragged(ActiveWrapper,MouseEvent)'
+	// (see 'ActiveWrapper.mouseDragged', which calls
+	// 'activeMode.dragged(this,e)' with a MouseEvent). The previous
+	// version of this method took a 'Point' instead of a 'MouseEvent',
+	// so it was an overload, not an override, and was never actually
+	// called while dragging -- holding the left button down and moving
+	// the mouse did nothing. Matching the base signature here lets
+	// dragging continuously extend and display the curve.
+	@Override
+	public int dragged(ActiveWrapper aW,MouseEvent e) { // override
 		CPdrawing cpS=aW.getCPDrawing();
 		ACTIVEHandler mH=aW.activeHandler;
+		Point point=e.getPoint();
 		Point2D.Double pt2D=(Point2D.Double)cpS.pt2RealPt(point,
 				aW.getWidth(),aW.getHeight());
 		if (mH.polygonalPath!=null) { // add new point (real world data)
@@ -90,6 +106,7 @@ public class PATHmode extends MyCanvasMode {
 		rePaint(aW); // call for repaint
 		return 1;
 	}
+	//<<<AF//
 	
 	/**
 	 * Store clone in the global Path2D.Double 'ClosedPath'. 

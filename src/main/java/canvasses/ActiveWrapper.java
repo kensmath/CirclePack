@@ -15,6 +15,7 @@ import java.awt.geom.Point2D;
 import java.io.File;
 
 import javax.swing.JPanel;
+import javax.swing.MenuSelectionManager;
 
 import circlePack.PackControl;
 import complex.Complex;
@@ -199,9 +200,28 @@ public class ActiveWrapper extends JPanel implements KeyListener,
 		activeMode.dragged(this,e);
 	}
 	public void mouseEntered(MouseEvent e) {
+		//AF>>>//
+		// Don't steal focus while a popup menu is active. The right-click
+		// "Display" menu is invoked on this canvas, so its submenus are
+		// very often positioned right on top of it; the pointer crossing
+		// from the canvas onto an overlapping submenu fires mouseExited
+		// here (see below), and re-crossing fires mouseEntered -- if
+		// either grabs focus mid-navigation, Swing's menu system reads
+		// that as focus leaving the menu and cancels it. That's why the
+		// menu only broke when a submenu overlapped the canvas: once the
+		// popup was pushed far enough to clear the canvas bounds, the
+		// pointer never re-triggered these handlers.
+		if (MenuSelectionManager.defaultManager().getSelectedPath().length>0)
+			return;
+		//<<<AF//
 		requestFocus(); // send focus to activeScreen so it gets key events
 	}
 	public void mouseExited(MouseEvent e) {
+		//AF>>>//
+		// See 'mouseEntered' above: skip while a menu is open.
+		if (MenuSelectionManager.defaultManager().getSelectedPath().length>0)
+			return;
+		//<<<AF//
 		PackControl.mbarPanel.requestFocusInWindow(); // move focus to innocuous place
 	}
 
