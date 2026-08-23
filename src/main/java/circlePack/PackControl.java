@@ -200,7 +200,16 @@ MouseMotionListener,FocusListener {
 // debugging
 //System.out.println("enter PackControl");
 
-		socketActive=true;  // means that socket server will be started
+		//AF>>>//
+		// Do NOT force 'socketActive=true' here. This field is inherited
+		// from CPBase and is set by command-line parsing (the '-socket'
+		// flag, in CirclePackMain.parseArgs()/CP_standalone.main()) before
+		// this constructor ever runs. Unconditionally overwriting it to
+		// true here silently ignored that flag and started the command
+		// socket server on every GUI launch, regardless of whether
+		// '-socket' was passed - leave whatever parseArgs() already
+		// decided (default: false) in place.
+		//<<<AF//
 		cpSocketHost=null;
 		cpMultiServer=null;
 		socketSources=new Vector<SocketSource>();
@@ -1134,6 +1143,16 @@ MouseMotionListener,FocusListener {
 		consoleCmd.dispConsoleMsg("");
 		consoleActive.dispConsoleMsg("");
 		consolePair.dispConsoleMsg("");
+		//AF>>>//
+		// 'recordMsg' only appends to the 'runHistory' buffer; unlike
+		// ShellManager.processCmdResults() (the normal per-command path),
+		// nothing here previously pushed that update into the visible
+		// shellPane. A message sent this way (e.g. errMsg() during
+		// startup, before any command is run) sat invisible until the
+		// next command happened to trigger updateShellPane() for an
+		// unrelated reason - hence the "delayed" message reports.
+		SwingUtilities.invokeLater(MessageFrame::updateShellPane);
+		//<<<AF//
 	}
 
 	/**
@@ -1143,6 +1162,9 @@ MouseMotionListener,FocusListener {
 	public void myErrorMsg(String msgstr) {
 		consoleCmd.dispConsoleMsg(msgstr);
 		shellManager.recordError(msgstr);
+		//AF>>>//
+		SwingUtilities.invokeLater(MessageFrame::updateShellPane);
+		//<<<AF//
 	}
 
 	/**
@@ -1151,6 +1173,9 @@ MouseMotionListener,FocusListener {
 	 */
 	public void myDebugMsg(String msgstr) {
 		shellManager.recordDebug(msgstr);
+		//AF>>>//
+		SwingUtilities.invokeLater(MessageFrame::updateShellPane);
+		//<<<AF//
 	}
 
 	/**

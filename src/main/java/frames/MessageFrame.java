@@ -2,6 +2,7 @@ package frames;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.List;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -50,7 +52,7 @@ import input.ShellManager;
 		static int shellHeadEnd; // keeps track of old end 
 		// for pruning display msg in tooltip before a 
 		// command is entered.
-		static String initShellText = "History of commands and messages will be displayed here.\n"; 
+// OBE		static String initShellText = "History of commands and messages will be displayed here.\n"; 
 
 		// command strings are kept in 'cmdHistory' for shell up/down action
 		public static List<String> cmdHistory = new ArrayList<String>(); 
@@ -90,7 +92,7 @@ import input.ShellManager;
 			shellPane.addFocusListener(new util.NavFocusListener(shellPane));
 			// TODO: want to get cursor to work, but not edit
 			// this doesn't work: shellPane.setFocusable(true);
-			shellPane.setText(initShellText);
+// OBE			shellPane.setText(initShellText);
 
 			msgScroller = new JScrollPane(shellPane);
 			msgScroller
@@ -152,11 +154,31 @@ import input.ShellManager;
 		}
 				
 		public void mouseClicked(MouseEvent me) {
-			System.out.println("clicked");
+//			System.out.println("clicked");
 			if(msgFrame.isVisible())
 				msgFrame.setVisible(false);
-			else
+			else {
 				msgFrame.setVisible(true);
+				//AF>>>//
+				// While 'msgFrame' is hidden, shellPane accumulates a
+				// running session's worth of history via setText() calls
+				// in updateShellPane() - but Swing's normal caret-follows-
+				// scroll behavior only kicks in while the text component
+				// is actually showing on screen, so all that time the
+				// viewport just sits wherever it was left (the top, from
+				// the very first setText()). Setting the caret again here
+				// is not enough by itself: it's already at the end of the
+				// document from the last updateShellPane() call, so no
+				// caret-moved event fires to trigger a scroll. Force the
+				// scrollbar down explicitly, once the frame is realized.
+				EventQueue.invokeLater(new Runnable() {
+					public void run() {
+						JScrollBar vbar=msgScroller.getVerticalScrollBar();
+						vbar.setValue(vbar.getMaximum());
+					}
+				});
+				//<<<AF//
+			}
 		}
 
 		public void mouseReleased(MouseEvent me) {}

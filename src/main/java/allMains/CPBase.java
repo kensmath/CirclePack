@@ -162,11 +162,24 @@ public abstract class CPBase {
 	public static TrafficCenter trafficCenter;
 	
 	// ---------- may want one or more sockets, e.g., commands from matlab
-	public static boolean socketActive; 
+	public static boolean socketActive;
 	public static int cpSocketPort=3736;
 	public static String cpSocketHost;
 	public static CPMultiServer cpMultiServer;
-	public static Vector<SocketSource> socketSources;  
+	public static Vector<SocketSource> socketSources;
+	//AF>>>//
+	// By default the command socket only accepts connections from this
+	// same machine (bound to loopback, 127.0.0.1) -- a remote client can
+	// run arbitrary CirclePack commands with no authentication, so there
+	// is no safe reason to expose it on the network by default. Set via
+	// '-socket-remote' (in addition to '-socket <port>') for the rare
+	// case where that's genuinely wanted, e.g. helping someone else run
+	// CirclePack over a LAN; see the reused socket security discussion
+	// in the '-socket-remote' argument parsing for safer alternatives
+	// (an SSH tunnel to the loopback-bound socket needs no code change
+	// here at all).
+	public static boolean socketAllowRemote=false;
+	//<<<AF//
 	
 	// ---------- Preferences
 	public static String PACKINGS_DIR="packings/";

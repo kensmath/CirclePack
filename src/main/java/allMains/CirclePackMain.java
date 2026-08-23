@@ -136,7 +136,21 @@ public class CirclePackMain {
                     } catch (Exception ex) {
                         prt = 3736;
                     }
-                } else if (j == args.length - 1) {
+                }
+                //AF>>>//
+                // Opt-in only: by default the command socket is bound to
+                // loopback (127.0.0.1), so only processes on this same
+                // machine can connect. This flag allows connections from
+                // other machines (e.g. over a LAN) -- only pass it on a
+                // network you trust, since the socket protocol has no
+                // authentication and grants full command execution. An
+                // SSH tunnel (or similar) to the loopback-bound socket is
+                // a safer way to reach it remotely and needs no flag here.
+                else if (args[j].equals("-socket-remote")) {
+                    CPBase.socketAllowRemote = true;
+                }
+                //<<<AF//
+                else if (j == args.length - 1) {
                     CPBase.initialScript = args[j];
                 }
             }

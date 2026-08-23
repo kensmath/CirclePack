@@ -48,7 +48,7 @@ public class ShellManager {
 		runHistory=new StringBuffer("<html><head><style>{ font-family: courier; font-size: 8px; }CirclePack run, ID "+
 				Integer.toString(CPBase.debugID)+"</style></head>\n");
 		runHistory.append("<body>\n");
-		runHistory.append("History of commands and messages will be displayed here.\n");
+		runHistory.append("History of commandsm and essages will be displayed here: \n");
 		runHistory.append("<!--HEAD BDRY-->\n"); // top anchor string, may be needed to find head
 		histHeadEnd=runHistory.length()+1;
 		

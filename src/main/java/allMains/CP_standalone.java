@@ -25,7 +25,7 @@ public class CP_standalone {
 					CPBase.initialScript=args[j+1];
 					j++;
 				}
-				else if (args[j].equals("-socket")) { // want a command socket 
+				else if (args[j].equals("-socket")) { // want a command socket
 					CPBase.socketActive=true;
 					int prt=3736;
 					try {
@@ -36,6 +36,19 @@ public class CP_standalone {
 						prt=3736;
 					}
 				}
+				//AF>>>//
+				// Opt-in only: by default the command socket is bound to
+				// loopback (127.0.0.1), so only processes on this same
+				// machine can connect. This flag allows connections from
+				// other machines (e.g. over a LAN) -- only pass it on a
+				// network you trust, since the socket protocol has no
+				// authentication and grants full command execution. An
+				// SSH tunnel (or similar) to the loopback-bound socket is
+				// a safer way to reach it remotely and needs no flag here.
+				else if (args[j].equals("-socket-remote")) {
+					CPBase.socketAllowRemote=true;
+				}
+				//<<<AF//
 				else if (j==args.length-1) { // last string, no flag, take as script
 					CPBase.initialScript=args[j];
 				}
