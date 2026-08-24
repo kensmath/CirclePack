@@ -38,7 +38,7 @@
              automatic version bump; bump this default by hand between
              releases if you want it to track intent, or ignore it and rely
              entirely on the tag. -->
-        <revision>6.0.0</revision>
+        <revision>beta</revision>
 
         <!-- Single source of truth for the main jar's base filename, so the
              "v" prefix only has to be written once and can't drift between
@@ -220,11 +220,13 @@
 
                     Because "process-resources" (which copies src/main/resources into
                     target/classes) runs BEFORE "compile", it has already finished by the time
-                    Info2HTML writes its new files. The second execution below — a
-                    maven-resources-plugin run bound to the same "process-classes" phase,
-                    declared right after this plugin so it runs second — re-copies
-                    src/main/resources into target/classes so the freshly generated doc files
-                    are present before "package" builds CirclePack-v{version}.jar.
+                    Info2HTML writes its new files. A maven-resources-plugin execution bound
+                    to this same "process-classes" phase re-copies src/main/resources into
+                    target/classes so the freshly generated doc files are present before
+                    "package" builds CirclePack-v{version}.jar. (That plugin block now sits
+                    further down, after maven-assembly-plugin — see the comment there — but
+                    it's still declared after this plugin, so within "process-classes" it
+                    still runs second, exactly as before.)
                     ============================================================ -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -237,50 +239,6 @@
                         <goals><goal>java</goal></goals>
                         <configuration>
                             <mainClass>infoProcessing.Info2HTML</mainClass>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <id>recopy-generated-info-html</id>
-                        <phase>process-classes</phase>
-                        <goals><goal>resources</goal></goals>
-                    </execution>
-
-                    <!-- ====================================================
-                         After the CirclePack-v{version}.jar has been fully
-                         assembled (see the "circlepack" execution of
-                         maven-assembly-plugin below), drop a copy of it in
-                         the project root (the "CirclePack/" directory that
-                         is the parent of target/), so it's available right
-                         next to pom.xml without digging into target/.
-
-                         Bound to "verify" (the phase immediately after
-                         "package") rather than "package" itself, so this is
-                         guaranteed to run after ALL THREE assembly
-                         executions have finished, regardless of plugin
-                         declaration order within the "package" phase.
-                         ==================================================== -->
-                    <execution>
-                        <id>copy-circlepack-jar-to-project-root</id>
-                        <phase>verify</phase>
-                        <goals><goal>copy-resources</goal></goals>
-                        <configuration>
-                            <outputDirectory>${project.basedir}</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>${project.build.directory}</directory>
-                                    <includes>
-                                        <include>${circlepack.jarBaseName}.jar</include>
-                                    </includes>
-                                </resource>
-                            </resources>
                         </configuration>
                     </execution>
                 </executions>
@@ -418,7 +376,82 @@
                 </executions>
             </plugin>
 
+            <!-- ============================================================
+                 AF>>>
+                 After the CirclePack-v{version}.jar has been fully assembled
+                 (the "circlepack" execution above), drop a copy of it in the
+                 project root (the "CirclePack/" directory that is the parent
+                 of target/), so it's available right next to pom.xml without
+                 digging into target/.
+
+                 Bound to "package" (moved here from "verify" - a plain
+                 "mvn package" does not run "verify", which runs after
+                 "package" in the lifecycle, so this copy never happened
+                 unless someone ran "mvn verify"/"install" instead). Since
+                 this execution needs the jar the assembly plugin just
+                 built, ordering within "package" matters: Maven runs same-
+                 phase executions in the order their plugin blocks appear in
+                 this file, so this plugin block is placed AFTER
+                 maven-assembly-plugin above, guaranteeing this copy step
+                 runs once all three assembly jars already exist - moving
+                 this <plugin> block back above maven-assembly-plugin would
+                 silently break it (copying nothing, no error).
+                 <<<AF
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>recopy-generated-info-html</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>resources</goal></goals>
+                    </execution>
+
+                    <execution>
+                        <id>copy-circlepack-jar-to-project-root</id>
+                        <phase>package</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.basedir}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>${circlepack.jarBaseName}.jar</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
+
+    <!-- ====================================================================
+         AF>>>
+         Opt-in profile for building a local beta jar on demand, without
+         touching the default build at all: "mvn package -Pbeta" overrides
+         just 'circlepack.jarBaseName' (normally "CirclePack-v${project.version}")
+         to the fixed name "CirclePack-beta", so the assembly plugin's
+         "circlepack" execution above produces target/CirclePack-beta.jar
+         directly - matching, by name, what the CI "beta" job in
+         .github/workflows/build.yml publishes to the repo's rolling "beta"
+         pre-release. Deliberately does NOT touch <revision>/<version>: a
+         plain "mvn package" (no -Pbeta) is completely unaffected and still
+         builds CirclePack-v${revision}.jar as always.
+         <<<AF
+         ==================================================================== -->
+    <profiles>
+        <profile>
+            <id>beta</id>
+            <properties>
+                <circlepack.jarBaseName>CirclePack-beta</circlepack.jarBaseName>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>
