@@ -20,9 +20,6 @@ import util.TriData;
  */
 public class HypPacker extends RePacker {
 	
-	// For max packing larger packings, use GOPack
-    public static final int HYP_GOPACK_THRESHOLD=1001;  
-
     // Constructors
     public HypPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
@@ -436,7 +433,7 @@ public class HypPacker extends RePacker {
 
 		// For large packings, hand the whole complex to
 		// the C++ version of GOPack:
-		if (p.nodeCount>HYP_GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+		if (p.nodeCount>=GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
 			try {
 				int[][] bouquet=p.getBouquet();
 				double[][] result=GOPackNative.computeMaximalPackingFromComplex(

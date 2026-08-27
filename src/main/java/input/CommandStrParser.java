@@ -18,12 +18,11 @@ import java.util.Vector;
 
 import javax.swing.JFrame;
 
+import JNI.DelaunayData;
 import JNI.GOPackException;
 import JNI.GOPackNative;
-import JNI.RandomComplexResult;
-
-import JNI.DelaunayData;
 import JNI.ProcessDelaunay;
+import JNI.RandomComplexResult;
 import allMains.CPBase;
 import allMains.CirclePack;
 import canvasses.ActiveWrapper;
@@ -73,6 +72,7 @@ import ftnTheory.ProjStruct;
 import ftnTheory.RationalMap;
 import ftnTheory.RiemHilbert;
 import ftnTheory.ShapeShifter;
+import ftnTheory.SphBranchNewton;
 import ftnTheory.SphereLayout;
 import ftnTheory.TileColoring;
 import ftnTheory.TorusEnergy;
@@ -1768,6 +1768,17 @@ public class CommandStrParser {
 	    			  returnVal=1;
 		    	  }
 	    	  }
+	    	  else if (str.equalsIgnoreCase("sn")) {
+	    		  if (!packData.status || packData.nodeCount==0)
+	    			  return 0;
+	    		  SphBranchNewton px=new SphBranchNewton(packData);
+	    		  if (px.running) {
+		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
+		    				  ": started "+px.extensionAbbrev+" extender");
+	    			  px.StartUpMsg();
+	    			  returnVal=1;
+		    	  }
+	    	  }
 	    	  else if (str.equalsIgnoreCase("tc")) {
 	    		  if (!packData.status || packData.nodeCount==0) 
 	    			  return 0;
@@ -3122,7 +3133,7 @@ public class CommandStrParser {
 				  // right per-geometry conversion (same e_to_s_data call used
 				  // when converting any other GOPack spherical result), so it
 				  // covers all four generators here with no special-casing.
-				  if (Tau==null && randN>RePacker.GOPACK_THRESHOLD
+				  if (Tau==null && randN>=RePacker.GOPACK_THRESHOLD
 						  && CPBase.gopackAvailable()) {
 					  try {
 						  if (Gamma!=null) { // curve-bounded region, incl. unit disc
@@ -3285,7 +3296,7 @@ public class CommandStrParser {
 			  // for large counts, hand generation AND packing entirely to
 			  // GOPack in one native call; falls through to the Java routine
 			  // below on failure, small count, or GOPack being unavailable.
-			  if (randN>RePacker.GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+			  if (randN>=RePacker.GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
 				  try {
 					  RandomComplexResult result=GOPackNative.computeRandomDisc(randN,0);
 					  randPack=GORandom.buildPackData(result);
@@ -3749,15 +3760,14 @@ public class CommandStrParser {
     			  n=Integer.parseInt(str);
     		  } catch(ParserException pex) {}
     		 if (n<0 || n>12) n=1; // 0-12 are values for LineThick slider in SupportFrame
-    		 try {
+    		 try {    
     			 pF.postLineThickness(n);
     		 } catch(Exception ex) {
     			 throw new DataException("'PostFactory' not open?");
     		 }
     		 return 1;
     	  }
-    	  
-
+  
     	  // ========= set_mobius (set_Mobius) ==============
     	  if (cmd.trim().equalsIgnoreCase("mobius")) {
     		  Mobius mob=null;
@@ -8986,16 +8996,56 @@ public class CommandStrParser {
 			  return 0;
 		  }
 		  
-	      // =========== rotate ===========
-		  else if (cmd.startsWith("rotate")) {
-			  double x=0.0;
-			  try {
-				  x=StringUtil.getOneDouble(flagSegs);
-			  } catch(Exception ex) {
-				  CirclePack.cpb.errMsg("usage: rotate <x>, x a double");
-				  return 0;
-			  }
-	    	  return packData.rotate(x*Math.PI);
+
+		  // ========== rectpack =======
+	      else if (cmd.startsWith("rectpa")) {
+	    	  if (packData.intrinsicGeom!=0) 
+	    		  throw new ParserException("usage: rectpack, only for eucl topological discs");
+	    	  jexecute(packData,"geom_to_e"); // in case it's hyperbolic
+    		  NodeLink crns=new NodeLink(packData);
+    		  //first check for given data
+	    	  if (flagSegs!=null && flagSegs.size()>0) {
+	    		  items=(Vector<String>)flagSegs.get(0); 
+	    		  NodeLink tmp=new NodeLink(packData,items);
+	    		  if (tmp!=null && tmp.size()>=4) {
+	    			  for (int j=0;j<4;j++) {
+	    				  int v=tmp.get(j);
+	    				  if (!packData.isBdry(v))
+	    					  throw new ParserException("usage: rectpack {v..}, vertices must be bdry");
+	    				  crns.set(j,tmp.get(j));
+	    			  }
+	    		  }
+	    	  }
+	    	  // else check vlist
+	    	  if ((crns==null || crns.size()<4) && packData.vlist!=null && packData.vlist.size()>=4) {
+   				  crns=new NodeLink(packData);
+   				  for (int j=0;j<4;j++) {
+   					  int v=packData.vlist.get(j);
+    				  if (!packData.isBdry(v))
+    					  throw new ParserException("usage: rectpack {v..}, vertices must be bdry");
+   					  crns.add(j,v);
+   				  }  						
+	    	  }
+	    	  // failed to get corners
+	    	  else
+	    		  throw new ParserException("usage: rectpack; four corner verts required");
+	    	  
+	    	  // set bdry aims
+	    	  jexecute(packData,"set_aim 1.0  b");
+	    	  StringBuilder strbld=new StringBuilder("set_aim 0.5 ");
+	    	  for (int j=0;j<4;j++)
+	    		  strbld.append(crns.get(j)+" ");
+	    	  jexecute(packData,strbld.toString());
+	    	  
+	    	  // now 'repack'; repack checks for parallelogram
+	    	  //   and will call gopack for sufficiently large
+	    	  //   complex.
+	    	  count+=jexecute(packData,"repack");
+	    	  if (packData.nodeCount<RePacker.GOPACK_THRESHOLD)
+	    		  jexecute(packData,"layout");
+	    	  
+	    	  
+	    	  return count;
 	      }
 	      
 	      // ========== repack ============= 
@@ -9017,7 +9067,7 @@ public class CommandStrParser {
 	    			  String str=items.remove(0);
 	    			  char c=str.charAt(1);
 	    			  switch(c) {
-	    			  case 'v': // specified vertices only; must be last flag segment
+	    			  case 'v': // specified vertices only; must be last "aspect segment
 	    			  {
 	    				  NodeLink vertlist=new NodeLink(packData,items);
 	    				  
@@ -9072,6 +9122,18 @@ public class CommandStrParser {
 			  }
 			  return count;
 	   	  }
+
+	      // =========== rotate ===========
+		  else if (cmd.startsWith("rotate")) {
+			  double x=0.0;
+			  try {
+				  x=StringUtil.getOneDouble(flagSegs);
+			  } catch(Exception ex) {
+				  CirclePack.cpb.errMsg("usage: rotate <x>, x a double");
+				  return 0;
+			  }
+	    	  return packData.rotate(x*Math.PI);
+	      }
 
 	      // ========== rm_? ===========
 	      else if (cmd.startsWith("rm_")) {
@@ -9242,6 +9304,7 @@ public class CommandStrParser {
 	    	  packData.packDCEL.fixDCEL(packData);
 	    	  return packData.packDCEL.vertCount;
 	      }
+
 		  break;
 	  } // end of 'r' and 'R'
 	  case 's':
@@ -11147,13 +11210,11 @@ public static CallPacket valueExecute(PackData packData,
 		    	  int i=0;
 		    	  while (vlist.hasNext()) {
 		    		  int v=(Integer)vlist.next();
+		    		  if (!packData.isBdry(v))
+		    			  throw new DataException("corners must be boundary vertices.");
 		    		  cnrs[i]=v;
 		    		  i++;
 		    	  }
-		    	  for (i=0;i<4;i++) 
-		    		  if (!packData.isBdry(cnrs[i])) {
-		    			  throw new DataException("corners must be boundary vertices.");
-		    		  }
 		    	  double aspect=packData.rect_ratio(cnrs[0],cnrs[1],cnrs[2],cnrs[3]);
 		    	  rtnCp=new CallPacket("aspect");
 		    	  rtnCp.double_vec=new Vector<Double>();

@@ -24,7 +24,6 @@ import packing.PackData;
  */
 public class SphPacker extends RePacker {
 	
-    public static final int SPH_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
     public static final double MPI2=2.0*Math.PI;
     int punc_vert;
     boolean swap=false;
@@ -86,7 +85,7 @@ public class SphPacker extends RePacker {
 
 		// For large packings, hand the whole complex to
 		// the C++ version of GOPack:
-		if (p.nodeCount>SPH_GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+		if (p.nodeCount>=GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
 			try {
 				int[][] bouquet=p.getBouquet();
 				double[][] result=GOPackNative.computeMaximalPackingFromComplex(

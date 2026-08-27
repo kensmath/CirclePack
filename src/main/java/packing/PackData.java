@@ -2344,8 +2344,7 @@ public class PackData{
 	 * This creates tmp 'RePacker' and applies 
 	 * methods depending on geometry, topology, 
 	 * bdry/invDist conditions, C library availability, 
-	 * and so forth. Can disallow GOPack C++ methods 
-	 * in GOpacker. Catches 'PackingException's.
+	 * and so forth. Catches 'PackingException's.
 	 * @param passes int, max repack cycles
 	 * @param oldRel boolean; true, use old reliable method
 	 * @param useC boolean; true, OK to use GOPack method.

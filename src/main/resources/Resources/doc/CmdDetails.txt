@@ -1660,57 +1660,6 @@ the face furthest from the boundary faces</instance>
 	<opt flag="-l"> find min/max/ratio of 3D edge lengths.</opt>
 </options>
 </command>
-
-
-<command cmd="GOpack" flags="[-v {v..}] -[ghqrsx] -[b{f}] -[c{n}]">
-<description> For packing computations using Gerald Orick's methods,
-    which involve computation of centers and radii at the same time.
-    These use sparse matrices and so rely (as of 6/2015) on C libraries.
-    Calls to 'max_pack' will use GOpack routines behind the scenes
-    for larger packings. However, these calls use default settings,
-    and for cases requiring more care, 'GOpack' can be started and
-    allowed to persist through multiple calls. One use of GOpack is
-    to adjust locations of some subpatch of centers: use the -v flag
-    to identify the vertices to be adjusted, then the -h flag to fix
-    all other locations.
-</description>
-<options>
-    <opt flag="-v {v..}"> special premptive flag, other flags ignored:
-        {v..} specifies subcomplex of vertices to be considered 'interior'.</opt>
-    <opt flag="-s"> set all radii to 1, but do no riffles</opt>
-    <opt flag="-m {n}"> do the usual max packing (sph or disc), 'n' passes</opt>
-    <opt flag="-c {n}"> continue packing 'n' passes with the current 
-        local data</opt>
-    <opt flag="-r"> (eucl case only) restart the existing 'GOpacker' 
-        by getting eucl radii and centers from the parent packing</opt>
-    <opt flag="-b{n} v1..vn [a1..an]"> Specifies a polygonal packing, v1..vn as 
-        cclw corners, optional a1..an as corresponding interior angles/pi. (default
-        to equal angles) </opt> 
-    <opt flag="-h"> 'harmonic' layout, i.e. solve for 'interior' with 
-        fixed boundary centers/radii (eucl only).</opt>        
-    <opt flag="-l"> debugging: layout the bdry only, depending on mode</opt>
-    <opt flag="-n {n}"> set the number of passes (iterations), used in
-        conjunction with other commands</opt>
-    <opt flag="-q"> return a value showing packing quality</opt>
-    <opt flag="-x"> kill the 'GOpacker'</opt>
-    <opt flag="-?"> print current GOpack status</opt>
-</options>
-<seealso>
-    <see> max_pack</see>  
-    <see> repack</see>
-    <see> polypack</see>
-    <see> perp_pack</see>  
-</seealso>
-<examples>
-    <instance text="GOpack -m"> computes the max packing with default number
-    of iterations</instance>
-    <instance text="GOpack -b4 2 3 7 33 .25 .75 .25 .75"> Using bdry radii, 
-    form a parallelogram with given corner vertices, and corner angles/pi 
-    (default values would be 1/4).
-    </instance>
-</examples>     
-</command>
-    
     
 <command cmd="h_dist" flags="z.re z.re w.re w.im">
 <description>Returns the hyperbolic distance between two points of the
@@ -2124,7 +2073,7 @@ these packings and the corresponding object is displayed in both.
 	issue separate commands to display the results.
 
 	Hyperbolic case (most common): Boundary radii are set to 
-	5.0, which is essentially infinity. (Setting them to
+	8.0, which is essentially infinity. (Setting them to
 	infinity, i.e., to any negative value, often results in
 	layout errors due to sensitivity in horocycle layouts.)
 
@@ -2133,36 +2082,42 @@ these packings and the corresponding object is displayed in both.
 	(But see "canonical" for optional multiply connected,
 	genus 0 eucl packings.)
 
-	Spherical case: Puncture, max_pack in the hyperbolic 
-	setting, then project back to the sphere. 
-	The user can specify the puncture (default being the largest 
-	index circle); the original indexing is restored after the 
-	packing operations. The standard normalization puts the 3D
-	centroid of the centers at the origin; alternately, one can
-	use 'NSpole' and its options.
+	Spherical case: The java routine punctures a vertex,
+	max_pack the result in the hyperbolic setting, then 
+	project back to the sphere. The user can specify the 
+	puncture (default being the largest	index circle); the 
+	original indexing is restored after the 
+	packing operations. The GOPack method for larger spherical
+	triangulations punctures a face, packs in euclidean geometry
+	with three equal boundary circles, then projects to the 
+	sphere. In both cases, the standard normalization puts the 3D
+	centroid of tangency points of the circle at the origin; 
+	subsequently, one can use 'NSpole' and its options.
 	(NOTE: If the packing computation is not completed (e.g., 
 	iterations 'cycles' is set too low), then projecting back 
 	to sphere largely invalidates the computations and one must
 	start over. It is recommended in these cases that puncturing, 
 	projecting to the hyp setting, max packing and layout there, 
-	then projecting back and normalizing. be carried out separately 
-	so the repacking is known to complete.)
+	then projecting back and normalizing. be carried out 
+	separately so the repacking is more likely to complete.)
 
 	NOTE: Historically, max packings were computing by computing
 	the labels first, using Thurston's iterative algorithm, then
-	calling 'layout' to compute the centers. (See 'repack'.)
-	However, Gerald Orick has developed a routine called GOPack
-	which is exceptionally fast and avoids layout problems for
-	very large packings. This is available as a Matlab code from
+	calling 'layout' to compute the centers. (See the java in 
+	'repack'.) However, Gerald Orick developed a routine called 
+	GOPack which is exceptionally fast and avoids layout 
+	problems for maximal packings of large complexes. This is 
+	available as a standalone Matlab package from
 	    www.github/kensmath/GOPack
-	GOPack computes radii and centers simultaneously, and due to
-	use of sparse matrix calls, is very, very fast. Although the 
-	radii are not as accurate (as is necessary when using 'layout'), 
-	the centers	are much better --- avoiding breakups that can
-	occur with 'layout' for large packings. It is hoped that the 
-	GOPack algorithm can eventually be incorporated directly or
-	as a C++ library call in CirclePack.
-		
+	or as a standalone C++ package from
+		www.github/kensmath/GOPack-cpp.
+	GOPack computes radii and centers simultaneously, and due 
+	to its use of sparse matrix calls, is very, very fast. 
+	Although the radii are not as accurate (as is necessary 
+	when using 'layout' to get centers), the centers are much 
+	better --- avoiding breakups that can occur with 'layout' 
+	for large packings. The GOPack algorithm is again available
+	within CirclePack.
 </description>	
 <options> 
      <opt flag="-v {v}"> for spherical case this specifies the 
@@ -2714,17 +2669,18 @@ with the 'pentagonal' cases among the 'create' options.
 
 <command cmd="polypack" flags="-[o] {w ..}">
 <description>
-Given 3 or more boundary vertices 'w', convert this packing to euclidean
-and repack/layout/display as a polygon with equal angles at the designed
-boundary vertices. Normalize so first corner is on the unit circle, rotate
-so first 2 vertices are in horizontal alignment, right to left.
+	Given 3 or more boundary vertices 'w', convert this 
+	packing to euclidean and repack/layout as a polygon 
+	with equal angles at the designed boundary vertices. 
+	Normalize so first corner is on the unit circle, rotate
+	so first 2 vertices are in horizontal alignment, 
+	right to left.
 </description>
 <options>
-    <opt flag='o'> use 'old reliable' versus GOpack algorithm</opt>
+    <opt flag='o'> use 'old reliable' algorithm</opt>
 </options>
 <seealso>
 <see>repack</see>
-<see>GOpack -bn {v1...vn}</see>
 </seealso>
 </command>
 
@@ -3150,6 +3106,22 @@ script and append it to 'ClosedPath'.</instance>
 </description>
 </command>
 
+<command cmd="rectpack" flags="[v1 v2 v3 v4]">
+<description>
+	If the active pack is euclidean and a topological 
+	disc and four bdry vertices are specified (or avaliable 
+	in 'vlist'), then boundary aims are set for a 
+	rectangular packing. There is a 'repack' call that
+	senses the rectangular setup, repacks, lays out,
+	and then reports on the resulting 'aspect'.
+</description>
+<seealso>
+<see>repack</see>
+<see>aspect</see>
+<see>polypack</see>
+</seealso>
+</command>
+
 <command cmd="reflect" flags="[[v1 ..],[b(v,w)]] [-c x y r]">
 <description>
 	Reflect the active packing through a segment 
@@ -3234,7 +3206,6 @@ script and append it to 'ClosedPath'.</instance>
 <seealso>
 <see> max_pack</see>
 <see> polypack</see>
-<see> GOpack</see>
 <see> perp_pack</see>
 </seealso>	 
 </command>
