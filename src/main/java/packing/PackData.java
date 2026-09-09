@@ -7190,6 +7190,5 @@ public class PackData{
 		PackData p=PackCreation.seed(schvals,cs,err,order);
 		return p;
 	}
-	
 		
 } // end of 'PackData' class

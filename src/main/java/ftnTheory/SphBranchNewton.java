@@ -3,7 +3,6 @@ package ftnTheory;
 import java.util.ArrayList;
 import java.util.Vector;
 
-import allMains.CirclePack;
 import combinatorics.komplex.DcelFace;
 import complex.Complex;
 import geometry.SphericalMath;

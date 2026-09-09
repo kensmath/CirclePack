@@ -1815,69 +1815,6 @@ the face furthest from the boundary faces</td></tr>
 <tr><td width="25%" valign="top">-l</td>
 <td width="65%" align="left"> find min/max/ratio of 3D edge lengths.</td></tr>
 </table></blockquote>
-<font size="+1" color="blue"><strong><a name="GOpack">GOpack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-v {v..}] -[ghqrsx] -[b{f}] -[c{n}]&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong> For packing computations using Gerald Orick's methods,
-    which involve computation of centers and radii at the same time.
-    These use sparse matrices and so rely (as of 6/2015) on C libraries.
-    Calls to 'max_pack' will use GOpack routines behind the scenes
-    for larger packings. However, these calls use default settings,
-    and for cases requiring more care, 'GOpack' can be started and
-    allowed to persist through multiple calls. One use of GOpack is
-    to adjust locations of some subpatch of centers: use the -v flag
-    to identify the vertices to be adjusted, then the -h flag to fix
-    all other locations.
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
-<blockquote>
-<table>
-<tr><td width="25%" valign="top">-v {v..}</td>
-<td width="65%" align="left"> special premptive flag, other flags ignored:
-        {v..} specifies subcomplex of vertices to be considered 'interior'.</td></tr>
-<tr><td width="25%" valign="top">-s</td>
-<td width="65%" align="left"> set all radii to 1, but do no riffles</td></tr>
-<tr><td width="25%" valign="top">-m {n}</td>
-<td width="65%" align="left"> do the usual max packing (sph or disc), 'n' passes</td></tr>
-<tr><td width="25%" valign="top">-c {n}</td>
-<td width="65%" align="left"> continue packing 'n' passes with the current 
-        local data</td></tr>
-<tr><td width="25%" valign="top">-r</td>
-<td width="65%" align="left"> (eucl case only) restart the existing 'GOpacker' 
-        by getting eucl radii and centers from the parent packing</td></tr>
-<tr><td width="25%" valign="top">-b{n} v1..vn [a1..an]</td>
-<td width="65%" align="left"> Specifies a polygonal packing, v1..vn as 
-        cclw corners, optional a1..an as corresponding interior angles/pi. (default
-        to equal angles) </td></tr>
-<tr><td width="25%" valign="top">-h</td>
-<td width="65%" align="left"> 'harmonic' layout, i.e. solve for 'interior' with 
-        fixed boundary centers/radii (eucl only).</td></tr>
-<tr><td width="25%" valign="top">-l</td>
-<td width="65%" align="left"> debugging: layout the bdry only, depending on mode</td></tr>
-<tr><td width="25%" valign="top">-n {n}</td>
-<td width="65%" align="left"> set the number of passes (iterations), used in
-        conjunction with other commands</td></tr>
-<tr><td width="25%" valign="top">-q</td>
-<td width="65%" align="left"> return a value showing packing quality</td></tr>
-<tr><td width="25%" valign="top">-x</td>
-<td width="65%" align="left"> kill the 'GOpacker'</td></tr>
-<tr><td width="25%" valign="top">-?</td>
-<td width="65%" align="left"> print current GOpack status</td></tr>
-</table></blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" repack">repack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; <a href=" perp_pack">perp_pack</a>&nbsp;&nbsp; 
-<br/><br/>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
-<blockquote>
-<table>
-<tr><td width="35%"><font color="blue">GOpack -m</font></td>
-<td width="63%"> computes the max packing with default number
-    of iterations</td></tr>
-<tr><td width="35%"><font color="blue">GOpack -b4 2 3 7 33 .25 .75 .25 .75</font></td>
-<td width="63%"> Using bdry radii, 
-    form a parallelogram with given corner vertices, and corner angles/pi 
-    (default values would be 1/4).
-    </td></tr>
-</table></blockquote>
 <font size="+1" color="blue"><strong><a name="h_dist">h_dist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">z.re z.re w.re w.im&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Returns the hyperbolic distance between two points of the
@@ -2342,7 +2279,7 @@ these packings and the corresponding object is displayed in both.
 	issue separate commands to display the results.
 
 	Hyperbolic case (most common): Boundary radii are set to 
-	5.0, which is essentially infinity. (Setting them to
+	8.0, which is essentially infinity. (Setting them to
 	infinity, i.e., to any negative value, often results in
 	layout errors due to sensitivity in horocycle layouts.)
 
@@ -2351,36 +2288,42 @@ these packings and the corresponding object is displayed in both.
 	(But see "canonical" for optional multiply connected,
 	genus 0 eucl packings.)
 
-	Spherical case: Puncture, max_pack in the hyperbolic 
-	setting, then project back to the sphere. 
-	The user can specify the puncture (default being the largest 
-	index circle); the original indexing is restored after the 
-	packing operations. The standard normalization puts the 3D
-	centroid of the centers at the origin; alternately, one can
-	use 'NSpole' and its options.
+	Spherical case: The java routine punctures a vertex,
+	max_pack the result in the hyperbolic setting, then 
+	project back to the sphere. The user can specify the 
+	puncture (default being the largest	index circle); the 
+	original indexing is restored after the 
+	packing operations. The GOPack method for larger spherical
+	triangulations punctures a face, packs in euclidean geometry
+	with three equal boundary circles, then projects to the 
+	sphere. In both cases, the standard normalization puts the 3D
+	centroid of tangency points of the circle at the origin; 
+	subsequently, one can use 'NSpole' and its options.
 	(NOTE: If the packing computation is not completed (e.g., 
 	iterations 'cycles' is set too low), then projecting back 
 	to sphere largely invalidates the computations and one must
 	start over. It is recommended in these cases that puncturing, 
 	projecting to the hyp setting, max packing and layout there, 
-	then projecting back and normalizing. be carried out separately 
-	so the repacking is known to complete.)
+	then projecting back and normalizing. be carried out 
+	separately so the repacking is more likely to complete.)
 
 	NOTE: Historically, max packings were computing by computing
 	the labels first, using Thurston's iterative algorithm, then
-	calling 'layout' to compute the centers. (See 'repack'.)
-	However, Gerald Orick has developed a routine called GOPack
-	which is exceptionally fast and avoids layout problems for
-	very large packings. This is available as a Matlab code from
+	calling 'layout' to compute the centers. (See the java in 
+	'repack'.) However, Gerald Orick developed a routine called 
+	GOPack which is exceptionally fast and avoids layout 
+	problems for maximal packings of large complexes. This is 
+	available as a standalone Matlab package from
 	    www.github/kensmath/GOPack
-	GOPack computes radii and centers simultaneously, and due to
-	use of sparse matrix calls, is very, very fast. Although the 
-	radii are not as accurate (as is necessary when using 'layout'), 
-	the centers	are much better --- avoiding breakups that can
-	occur with 'layout' for large packings. It is hoped that the 
-	GOPack algorithm can eventually be incorporated directly or
-	as a C++ library call in CirclePack.
-		
+	or as a standalone C++ package from
+		www.github/kensmath/GOPack-cpp.
+	GOPack computes radii and centers simultaneously, and due 
+	to its use of sparse matrix calls, is very, very fast. 
+	Although the radii are not as accurate (as is necessary 
+	when using 'layout' to get centers), the centers are much 
+	better --- avoiding breakups that can occur with 'layout' 
+	for large packings. The GOPack algorithm is again available
+	within CirclePack.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -2959,19 +2902,21 @@ with the 'pentagonal' cases among the 'create' options.
 <font size="+1" color="blue"><strong><a name="polypack">polypack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[o] {w ..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-Given 3 or more boundary vertices 'w', convert this packing to euclidean
-and repack/layout/display as a polygon with equal angles at the designed
-boundary vertices. Normalize so first corner is on the unit circle, rotate
-so first 2 vertices are in horizontal alignment, right to left.
+	Given 3 or more boundary vertices 'w', convert this 
+	packing to euclidean and repack/layout as a polygon 
+	with equal angles at the designed boundary vertices. 
+	Normalize so first corner is on the unit circle, rotate
+	so first 2 vertices are in horizontal alignment, 
+	right to left.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">o</td>
-<td width="65%" align="left"> use 'old reliable' versus GOpack algorithm</td></tr>
+<td width="65%" align="left"> use 'old reliable' algorithm</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="GOpack -bn {v1...vn}">GOpack -bn {v1...vn}</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="post">post</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
@@ -3452,6 +3397,19 @@ script and append it to 'ClosedPath'.</td></tr>
 	to the filename, so an explicit path (possibly starting '~/')
 	is allowed.
 </blockquote>
+<font size="+1" color="blue"><strong><a name="rectpack">rectpack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[v1 v2 v3 v4]&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>
+	If the active pack is euclidean and a topological 
+	disc and four bdry vertices are specified (or avaliable 
+	in 'vlist'), then boundary aims are set for a 
+	rectangular packing. There is a 'repack' call that
+	senses the rectangular setup, repacks, lays out,
+	and then reports on the resulting 'aspect'.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="aspect">aspect</a>&nbsp;&nbsp; <a href="polypack">polypack</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="reflect">reflect</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[[v1 ..],[b(v,w)]] [-c x y r]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -3534,7 +3492,7 @@ script and append it to 'ClosedPath'.</td></tr>
 		nontrivial inversive distances)</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; <a href=" GOpack">GOpack</a>&nbsp;&nbsp; <a href=" perp_pack">perp_pack</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; <a href=" perp_pack">perp_pack</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="ring">ring</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>

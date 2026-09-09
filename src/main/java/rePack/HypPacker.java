@@ -222,6 +222,9 @@ public class HypPacker extends RePacker {
 		// Begin Main Loop
 		while ((accumErr2 > ttoler && localPasses < passLimit)) {
 
+			// cheap emergency-stop check -- once per pass, not per vertex
+			CPBase.checkCancel();
+
 			// routines use squared s-radii
 			for (int j = 0; j < aimnum; j++) {
 				int v=index[j];

@@ -56,9 +56,70 @@ public class TrafficCenter {
 	protected String lastCmd;
 	protected static final int MAX_DEPTH=5; // max recursion depth
 
+	// All the worker/for threads currently doing a long-running
+	// computation (the 'workerThread' in 'parseWrapper', or the
+	// 'forThread' in 'forWrapper'). This is a SET, not a single
+	// thread, because top-level commands are fire-and-forget: a
+	// command issued while another is still running (e.g. typing
+	// 'disp ...' while a long 'run' is in progress) starts its own
+	// worker thread without waiting for the first one, so more than
+	// one can genuinely be alive at once. 'emergencyStop()' interrupts
+	// all of them -- it is a "stop everything currently running"
+	// button, not a way to target just one in-flight command.
+	private static final java.util.Set<Thread> activeWorkerThreads =
+			java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
 	// Constructor
 	public TrafficCenter() {
 		lastCmd=new String("");
+	}
+
+	/**
+	 * Called (on the EDT) when the user presses the emergency-stop
+	 * button that 'OwlSpinner' shows next to the progress spinner.
+	 * Sets the flag that the packing "hot loops" check cheaply (see
+	 * 'CPBase.checkCancel()'), and also interrupts every currently
+	 * running worker/for thread directly, in case one of them is
+	 * blocked in a sleep/wait/read rather than spinning in a checked
+	 * loop.
+	 * <p>
+	 * NOTE 1: this aborts EVERYTHING currently running, not just
+	 * whichever computation prompted you to reach for the stop button
+	 * -- there's only one shared cancel signal, not one per command.
+	 * <p>
+	 * NOTE 2: if a computation is actually inside the native GOPack
+	 * JNI library at the moment of the click, neither the flag nor the
+	 * interrupt can do anything until control returns to Java -- the
+	 * JVM cannot interrupt native code. The stop takes effect the next
+	 * time Java code regains control (e.g. once that native call
+	 * returns).
+	 */
+	public static void emergencyStop() {
+		CPBase.cancelRequested.set(true);
+		for (Thread t : activeWorkerThreads) {
+			if (t.isAlive())
+				t.interrupt();
+		}
+	}
+
+	private static boolean cancelWasRequested() {
+		return CPBase.cancelRequested.get();
+	}
+
+	/**
+	 * Called by a worker/for thread as it finishes, after removing
+	 * itself from 'activeWorkerThreads'. Only clears the shared cancel
+	 * flag once NO worker thread is left running -- clearing it
+	 * unconditionally (e.g. at the *start* of every new command) would
+	 * race with an emergency-stop aimed at an older, still-running
+	 * command: a quick command issued right after the stop button was
+	 * pressed could reset the flag before the older thread's next
+	 * 'checkCancel()' had a chance to see it, silently swallowing the
+	 * stop request.
+	 */
+	private static void clearCancelIfIdle() {
+		if (activeWorkerThreads.isEmpty())
+			CPBase.cancelRequested.set(false);
 	}
 
 	/**
@@ -96,6 +157,7 @@ public class TrafficCenter {
 			
 			Thread workerThread = new Thread(new Runnable() {
 				public void run() {
+					activeWorkerThreads.add(Thread.currentThread());
 					if (CPBase.cmdDebug) {
 						System.out.println("new 'workerThread' in TrafficCenter");
 						System.out.flush();
@@ -108,10 +170,41 @@ public class TrafficCenter {
 						CPBase.trafficCenter.parseCmdSeq(rP, depth, mycon);
 						ShellManager.processCmdResults(rP,mycon);
 					} catch (Exception ex) {
-						CirclePack.cpb.errMsg("'TrafficCenter' work thread error: "
-								+ ex.getMessage());
+						if (!cancelWasRequested())
+							CirclePack.cpb.errMsg("'TrafficCenter' work thread error: "
+									+ ex.getMessage());
+					} finally {
+						// Consume any interrupt now, before anything below can
+						// block. 'emergencyStop()' calls Thread.interrupt() on
+						// us as a belt-and-suspenders measure (in case we were
+						// blocked in a sleep/wait/read rather than spinning in
+						// a checked loop); if nothing actually consumed that
+						// interrupt -- e.g. we were caught by
+						// 'CPBase.checkCancel()' instead, which has nothing to
+						// do with Thread interrupt status -- the JVM leaves
+						// this thread's interrupt flag set to true. Left
+						// alone, that makes the very next blocking call this
+						// thread makes -- even something unrelated, like the
+						// Swing document lock inside 'errMsg()' below --
+						// throw an immediate, spurious InterruptedException.
+						// We've fully handled the cancellation at this point,
+						// so the signal shouldn't leak into our own cleanup.
+						Thread.interrupted();
+
+						if (cancelWasRequested()) {
+							CirclePack.cpb.errMsg(
+									"Emergency stop: computation aborted by user.");
+						}
+						// paired with the 'startstop(true)' above: this
+						// thread's own contribution to the "busy" count goes
+						// back down by exactly one, so the spinner stays on
+						// as long as any OTHER concurrently-running command
+						// (e.g. a quick 'disp' issued while a long 'run' is
+						// still going) is still in progress
+						CPBase.runSpinner.startstop(false);
+						activeWorkerThreads.remove(Thread.currentThread());
+						clearCancelIfIdle();
 					}
-					CPBase.runSpinner.startstop(false);
 //					System.out.println("turn owl off");
 				}
 			});
@@ -767,85 +860,107 @@ public class TrafficCenter {
 		try {
 			Thread forThread = new Thread(new Runnable() {
 				public void run() {
+					activeWorkerThreads.add(Thread.currentThread());
 					CPBase.runSpinner.startstop(true);
-					String cmd = fcmd;
-					PackData p = fp;
-
-					int accumCount = 0;
-					String varName = null;
-					if (finalForSpec.varName != null)
-						varName = finalForSpec.varName.trim();
-					double varVal = finalForSpec.start;
-					double varDelta = finalForSpec.delta;
-					double start = finalForSpec.start;
-					double end = finalForSpec.end;
-					double delta = finalForSpec.delta;
-					
-					double delay = fdelay;
-
-					ResultPacket rP=null;
-					boolean named = !(varName == null || varName.length() == 0);
-					if (Math.abs(delta) < CPBase.GENERIC_TOLER) {
-						throw new ParserException("'for' increment too small");
-					}
-					if (delta < 0) { // flip increment orientation
-						delta *= -1.0;
-						start *= -1.0;
-						end *= -1.0;
-					}
-
-					while (start <= end) {
-						
-						// update loop variable if named
-						if (named) { 
-							String newVal = Double.valueOf(varVal).toString();
-							Vector<String> itm=new Vector<String>(1);
-							itm.add(newVal);
-							Vector<Vector<String>> flsg=new Vector<Vector<String>>(1);
-							flsg.add(itm);
-							CPBase.varControl.putVariable(p,varName,flsg);
-						}
-						
-						try {
-
-							// here's the actual next execution pass
-							rP=new ResultPacket(p,cmd);
-							CPBase.trafficCenter.parseCmdSeq(rP,0,mycon);
-							// check if iteration got interrupt signal (e.g. from 'break')
-							if (rP.interrupt) {
-								start=end; 
-							}
-							accumCount += rP.cmdCount;
-						} catch (Exception ex) {
-							CPBase.runSpinner.startstop(false);
-							throw new ParserException(
-									"'for' count at exception: " + accumCount);
-						}
-
-						if (delay > 0.0) {
-							try {
-								Thread.sleep((long) (delay * 1000.0));
-							} catch (InterruptedException ie) {
-							}
-						}
-
-						start += delta; // iteration variables
-						varVal += varDelta; // increment real variables
-						accumCount++;
-					} // end of big while
-
-					// store results in messages and history; info is from
-					// last execution, but count is accumulated
 					try {
+						String cmd = fcmd;
+						PackData p = fp;
+
+						int accumCount = 0;
+						String varName = null;
+						if (finalForSpec.varName != null)
+							varName = finalForSpec.varName.trim();
+						double varVal = finalForSpec.start;
+						double varDelta = finalForSpec.delta;
+						double start = finalForSpec.start;
+						double end = finalForSpec.end;
+						double delta = finalForSpec.delta;
+
+						double delay = fdelay;
+
+						ResultPacket rP=null;
+						boolean named = !(varName == null || varName.length() == 0);
+						if (Math.abs(delta) < CPBase.GENERIC_TOLER) {
+							throw new ParserException("'for' increment too small");
+						}
+						if (delta < 0) { // flip increment orientation
+							delta *= -1.0;
+							start *= -1.0;
+							end *= -1.0;
+						}
+
+						while (start <= end) {
+
+							// emergency-stop check: bail out promptly between
+							// commands even if none of them individually got
+							// long enough to trip a 'checkCancel()' of their own
+							CPBase.checkCancel();
+
+							// update loop variable if named
+							if (named) {
+								String newVal = Double.valueOf(varVal).toString();
+								Vector<String> itm=new Vector<String>(1);
+								itm.add(newVal);
+								Vector<Vector<String>> flsg=new Vector<Vector<String>>(1);
+								flsg.add(itm);
+								CPBase.varControl.putVariable(p,varName,flsg);
+							}
+
+							try {
+
+								// here's the actual next execution pass
+								rP=new ResultPacket(p,cmd);
+								CPBase.trafficCenter.parseCmdSeq(rP,0,mycon);
+								// check if iteration got interrupt signal (e.g. from 'break')
+								if (rP.interrupt) {
+									start=end;
+								}
+								accumCount += rP.cmdCount;
+							} catch (exceptions.PackingCancelledException pce) {
+								throw pce; // let the outer finally report/clean up
+							} catch (Exception ex) {
+								throw new ParserException(
+										"'for' count at exception: " + accumCount);
+							}
+
+							if (delay > 0.0) {
+								try {
+									Thread.sleep((long) (delay * 1000.0));
+								} catch (InterruptedException ie) {
+									// likely woken by emergency-stop's interrupt();
+									// the 'checkCancel()' at the top of the loop
+									// will catch it on the very next pass
+								}
+							}
+
+							start += delta; // iteration variables
+							varVal += varDelta; // increment real variables
+							accumCount++;
+						} // end of big while
+
+						// store results in messages and history; info is from
+						// last execution, but count is accumulated
 						rP.cmdCount=accumCount;
 						rP.memoryFlag=true;
 						ShellManager.processCmdResults(rP,mycon);
+
 					} catch (Exception ex) {
+						if (!cancelWasRequested())
+							CirclePack.cpb.errMsg("'for' loop error: " + ex.getMessage());
+					} finally {
+						// see the matching comment in 'parseWrapper()''s
+						// workerThread: consume any pending interrupt before
+						// anything below (e.g. 'errMsg()') can block on it
+						Thread.interrupted();
+
+						if (cancelWasRequested()) {
+							CirclePack.cpb.errMsg(
+									"Emergency stop: 'for' loop aborted by user.");
+						}
 						CPBase.runSpinner.startstop(false);
-						throw new ParserException(
-								"problem processing results: " + ex.getMessage());
+						activeWorkerThreads.remove(Thread.currentThread());
+						clearCancelIfIdle();
 					}
-					CPBase.runSpinner.startstop(false);
 				}
 			});
 			forThread.start();

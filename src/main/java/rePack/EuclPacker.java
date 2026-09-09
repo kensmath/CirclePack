@@ -180,8 +180,12 @@ public class EuclPacker extends RePacker {
 	try {
 	    for (int j=0;j<aimnum;j++) {
 	    	int v = index[j];
-	    	double faim = p.packDCEL.vertices[v].aim;         // get target sum 
-	    	double r = getTriRadius(v);            // get present label
+	    	
+// debuggin
+//	    	System.out.println(" v = "+v);
+	    	
+	    	double faim = p.packDCEL.vertices[v].aim; // get target sum 
+	    	double r = getTriRadius(v); // get present label
 
 	    	// compute anglesum (using local data)
 	    	double fbest=compTriCurv(v,r);
@@ -223,10 +227,13 @@ public class EuclPacker extends RePacker {
 	localPasses=0;
 	passLimit=passL;
 
-	// Begin Main Loop 
+	// Begin Main Loop
 	while ((accumErr2 >ttoler && localPasses<passLimit)) {
-	    
-	    for (int i=1;i<=p.nodeCount;i++) 
+
+	    // cheap emergency-stop check -- once per pass, not per vertex
+	    CPBase.checkCancel();
+
+	    for (int i=1;i<=p.nodeCount;i++)
 	    	R1[i] = getTriRadius(i);
 	    
 	    int numBadCuts = 0;
@@ -610,9 +617,10 @@ public class EuclPacker extends RePacker {
     	CommandStrParser.jexecute(p,"geom_to_e");
   	  	p.set_aim_default();
   	  	
-		// for large rectangle packings, hand corners+angles straight to
-		// GOPack's polygonal mode; only the 4-corner (rectangle) case is
-		// wired up so far -- see POLYGON_JNI_HANDOFF.md for why arbitrary
+		// for large rectangle packings, hand corners+angles 
+  	  	// straight to GOPack's polygonal mode; only the 
+  	  	// 4-corner (rectangle) case is wired up so far -- 
+  	  	// see POLYGON_JNI_HANDOFF.md for why arbitrary
 		// polygons are held off for now.
 		if (okayC && n==4 && p.nodeCount>=GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
 			try {

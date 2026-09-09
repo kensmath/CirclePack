@@ -193,7 +193,7 @@ public class Complex {
 		return x * x + y * y;
 	}
 
-	/** Returns the "argument" of the complex number in -pi to pi.*/
+	/** Returns the "argument" in [-pi, pi].*/
 	public double arg() {
 		  return Math.atan2(y,x);
 	}

@@ -4,13 +4,11 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 
@@ -41,28 +39,13 @@ public class VertScriptBar extends JPanel {
 		setLayout(new BoxLayout(this,BoxLayout.PAGE_AXIS));
 		setBorder(new LineBorder(Color.blue,1,false));
 		JButton scriptButton=new JButton("Script");
-		scriptButton.addMouseListener(PackControl.scriptHover);
-		ScriptBundle.scriptButton.addMouseListener(PackControl.scriptHover);
 		scriptButton.setFont(new Font(scriptButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
         scriptButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 //        scriptButton.setToolTipText("Toggle the 'Script' window for "+
 //        		"commands/details");
 		scriptButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (PackControl.scriptHover.isLocked()) { 
-					// if iconified, bring it up
-					if (PackControl.scriptHover.lockedFrame.getState()==
-						JFrame.ICONIFIED)
-						PackControl.scriptHover.lockedFrame.setState(Frame.NORMAL);
-					else { // else load hover
-						PackControl.scriptHover.loadHover();
-						PackControl.scriptHover.locked=false;
-					}
-				}
-				else { 
-					PackControl.scriptHover.lockframe();
-					PackControl.scriptHover.locked=true;
-				}
+				PackControl.scriptHover.toggleShow();
 			}
 		});
 		add(scriptButton);

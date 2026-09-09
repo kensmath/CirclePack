@@ -3,21 +3,26 @@ package frames;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -44,14 +49,17 @@ import util.RealField;
 import variables.SliderControlPanel;
 
 /**
- * TabbedPackDataHover is a hover panel displaying pack data. It contains
+ * TabbedPackDataHover is a plain frame displaying pack data. It contains
  * a tabbed pane displaying combinatoric information, a pack data tree,
- * and the current active variables.
- * 
+ * and the current active variables. (Formerly a "hover" panel that
+ * popped up on mouse-over and locked into a frame on click -- that
+ * behavior didn't work out, so, like the other frames that used the
+ * same hover model, this is back to a plain JFrame; see 'toggleShow()'.)
+ *
  * @author kens
  * @author Alex Fawkes
  */
-public class TabbedPackDataHover extends FluidHoverPanel implements ActionListener {
+public class TabbedPackDataPanel extends JPanel implements ActionListener {
 	/*
 	 * Regenerate serialVersionUID whenever the nature of this class's fields change
 	 * so that this class may be flattened. As background, serialization provides a
@@ -114,21 +122,125 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 	// The data tree and its containing panel, which form their own tab.
 	protected JPanel dataTreePanel;
 	protected DataTree dataTree;
-	
+
 	// The button to update the information to reflect packing changes.
 	protected JButton updateButton;
 
 	// Subclass instance for containing GUI update functionality.
 	protected UpdateActions updateActions = new UpdateActions();
-	
+
 	public VariableControlPanel variableControlPanel;
 	public SliderControlPanel sliderControlPanel;
 
+	// The tabbed pane holding the three tabs (a field now, not a local
+	// variable of 'createGUI()', so 'toggleShow()' can check which tab
+	// is selected).
+	protected JTabbedPane tabbedPane;
+
+	// The plain frame this panel lives in. Never disposed -- closing it
+	// (via the window's own close box, or via 'toggleShow()') just
+	// hides it, so reopening is cheap and doesn't rebuild the GUI.
+	public JFrame dataFrame;
+
+	// How recently 'dataFrame' was deactivated (lost focus to some
+	// other window), in System.currentTimeMillis(). See 'toggleShow()'
+	// for why this -- rather than live focus state -- is what actually
+	// tells "was covered by another window" apart from "was the one
+	// the user was just looking at."
+	private volatile long lastDeactivatedAt = 0L;
+
+	// A genuine mouse click-and-release is well under this; see
+	// 'toggleShow()'.
+	private static final long RECENTLY_ACTIVE_MS = 400;
+
 	// Constructor
-	public TabbedPackDataHover(JComponent parent) {
-		super(parent);
+	public TabbedPackDataPanel() {
+		super();
+
+		dataFrame = new JFrame("Pack Data");
+		dataFrame.setLocation(120, 60);
+		dataFrame.setResizable(true);
+		dataFrame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent we) {
+				// don't dispose -- just hide, same as the third click
+				// of 'toggleShow()' below
+				dataFrame.setVisible(false);
+			}
+			@Override
+			public void windowDeactivated(WindowEvent we) {
+				lastDeactivatedAt = System.currentTimeMillis();
+			}
+		});
 
 		createGUI();
+
+		dataFrame.add(this);
+		dataFrame.pack();
+		dataFrame.setVisible(false);
+	}
+
+	/**
+	 * Three-way toggle for the "Pack Info" button, replacing the old
+	 * hover/lock behavior:
+	 * <ol>
+	 * <li>not currently showing -- show it, raise it, and refresh the
+	 *     "Pack Data Tree" tab if that's the one selected;</li>
+	 * <li>showing, but either iconified (minimized) or sitting behind
+	 *     another window -- restore/raise it, same refresh as (1),
+	 *     without closing it;</li>
+	 * <li>showing, not iconified, and was the frame the user was just
+	 *     looking at -- close it (hide it; per the constructor, it's
+	 *     never disposed, so this is cheap to reverse).</li>
+	 * </ol>
+	 * <p>
+	 * NOTE on how (2) and (3) are told apart: this button lives in a
+	 * DIFFERENT window (the main PackControl frame), so merely clicking
+	 * it always moves keyboard focus to that window first -- by the
+	 * time this method runs, 'dataFrame' has already been deactivated,
+	 * whether it was previously topmost or sitting in the background.
+	 * So 'dataFrame.isActive()' is useless here: it's false on every
+	 * single call, which would make case (3) unreachable (this was
+	 * tried, and that's exactly the bug it caused).
+	 * <p>
+	 * What DOES distinguish them is *when* that deactivation happened.
+	 * If 'dataFrame' was already sitting behind some other CirclePack
+	 * window, it was deactivated whenever the user switched to that
+	 * other window -- seconds ago, at least. If it was the frontmost,
+	 * focused window right up until this click, then its deactivation
+	 * is a direct, immediate side effect of clicking this button, and
+	 * lands within a few milliseconds of this method running (a real
+	 * click-and-release is well under RECENTLY_ACTIVE_MS). So: a
+	 * "just now" deactivation means the user was just looking at it
+	 * (close it); an "a while ago" deactivation means something else
+	 * has been in front of it since (raise it).
+	 */
+	public void toggleShow() {
+		if (!dataFrame.isVisible()) {
+			dataFrame.setVisible(true);
+			dataFrame.setState(Frame.NORMAL); // in case it was iconified
+			dataFrame.toFront();
+			refreshDataTreeIfSelected();
+		}
+		else if (dataFrame.getState()==Frame.ICONIFIED
+				|| System.currentTimeMillis()-lastDeactivatedAt >= RECENTLY_ACTIVE_MS) {
+			dataFrame.setState(Frame.NORMAL);
+			dataFrame.toFront();
+			refreshDataTreeIfSelected();
+		}
+		else {
+			dataFrame.setVisible(false);
+		}
+	}
+
+	/**
+	 * Refresh the pack data tree display -- same action as clicking
+	 * "Update" -- but only when that tab is actually the one showing,
+	 * so switching to/opening on another tab doesn't do pointless work.
+	 */
+	private void refreshDataTreeIfSelected() {
+		if (tabbedPane.getSelectedComponent()==dataTreePanel)
+			updateActions.updateData(CirclePack.cpb.getActivePackData());
 	}
 
 	public void createGUI() {
@@ -612,10 +724,26 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		 */
 		// TODO: The selection color for the tabbed pane doesn't look great.
 		// Would be nice to figure out how to make this look correct.
-		JTabbedPane tabbedPane = new JTabbedPane();
+		tabbedPane = new JTabbedPane();
 		tabbedPane.addTab("VEF Data", vefDataPanel);
 		tabbedPane.addTab("Pack Data Tree", dataTreePanel);
 		tabbedPane.addTab("Variables", varSplitPane);
+
+		// Trip the same update the "Update" button does whenever the
+		// "Pack Data Tree" tab becomes the selected tab (a tab switch
+		// fires stateChanged even if it's just switching back from
+		// "Variables", not only the first time), so it's never left
+		// showing stale data from before the tab was selected. The
+		// other case -- opening/raising the whole window while this
+		// tab was already selected from before -- is covered by
+		// 'toggleShow()' instead, since a plain tab switch doesn't
+		// fire on its own here.
+		tabbedPane.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent ce) {
+				refreshDataTreeIfSelected();
+			}
+		});
 
 		/*
 		 * 
@@ -671,7 +799,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		 * @param packData the <code>PackData</code> to reflect in the update
 		 */
 		public void updateData(PackData packData) {
-			lockedFrame.setTitle("Data for Packing p" + packData.packNum);
+			dataFrame.setTitle("Data for Packing p" + packData.packNum);
 			dataTree.updatePackingData(packData);
 			updateVertex(packData, false);
 			updateFace(packData);

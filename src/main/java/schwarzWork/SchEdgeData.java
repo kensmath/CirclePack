@@ -10,9 +10,9 @@ import util.ColorUtil;
 /**
  * Data for 'HalfEdge's subject to adjustment
  * when circle packing via intrinsic schwarzians.
- * Computing a new schwarzian involves the N-3
- * previous edge schwarzians, so we want that to
- * be easy to compute.
+ * Computing a new schwarzian in a flower involves 
+ * the N-3 previous edge schwarzians, so we want 
+ * that to be easy to compute.
  * 
  * These objects are instantiated when 'SchwarzPack'
  * is initiated and put in an array, indexed starting

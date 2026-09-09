@@ -5,7 +5,6 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.Point;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DnDConstants;
@@ -24,7 +23,6 @@ import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -173,20 +171,7 @@ public class ScriptBundle extends JPanel implements ActionListener {
 				toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
 		scriptButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (PackControl.scriptHover.isLocked()) { 
-					// if iconified, bring it up
-					if (PackControl.scriptHover.lockedFrame.getState()==
-						JFrame.ICONIFIED)
-						PackControl.scriptHover.lockedFrame.setState(Frame.NORMAL);
-					else { // else load hover
-						PackControl.scriptHover.loadHover();
-						PackControl.scriptHover.locked=false;
-					}
-				}
-				else { 
-					PackControl.scriptHover.lockframe();
-					PackControl.scriptHover.locked=true;
-				}
+				PackControl.scriptHover.toggleShow();
 			}
 		});
 		
@@ -380,7 +365,7 @@ public class ScriptBundle extends JPanel implements ActionListener {
 				firstInit=true;
 				Point pt=PackControl.frame.getLocation();
 				pt.y=pt.y+PackControl.frame.getHeight();
-				PackControl.scriptHover.lockedFrame.setLocation(pt);
+				PackControl.scriptHover.scriptFrame.setLocation(pt);
 			}
 		}
 		else { // 'scriptBar' to bottom of PackControl

@@ -14,11 +14,17 @@ public class ShellSpinner extends RunProgress {
 		
 	}
 	
-	/** 
+	/**
 	 * As yet, no running status; default to 'false'
 	 */
 	public boolean isRunning() {
 		return false;
 	}
-	
+
+	/**
+	 * Nothing to reset in standalone mode
+	 */
+	public void forceOff() {
+	}
+
 }

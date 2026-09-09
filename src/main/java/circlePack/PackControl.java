@@ -46,14 +46,13 @@ import frames.AboutFrame;
 import frames.BrowserFrame;
 import frames.FtnFrame;
 import frames.HelpFrame;
-import frames.HoverPanel;
 import frames.MessageFrame;
 import frames.MobiusFrame;
 import frames.OutputFrame;
 import frames.OwlSplashScreen;
 import frames.PairedFrame;
 import frames.ScreenCtrlFrame;
-import frames.TabbedPackDataHover;
+import frames.TabbedPackDataPanel;
 import handlers.MYTOOLHandler;
 import handlers.SCRIPTHandler;
 import images.CPIcon;
@@ -103,7 +102,6 @@ MouseMotionListener,FocusListener {
 	public static JFrame frame=null;
 	public static MainFrame activeFrame=null; // contains activeCanvas
 	public static PairedFrame mapPairFrame=null;
-	public static HoverPanel controlPanel;
 	public static CanvasReDrawManager canvasRedrawer; // for repainting various canvasses
 	public static String CPVersion= new String("CirclePack, "+circlePack.Version.version+", "+
 			DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date()));
@@ -176,7 +174,7 @@ MouseMotionListener,FocusListener {
 	public static BrowserFrame browserFrame;
 	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;
-	public static TabbedPackDataHover packDataHover; 
+	public static TabbedPackDataPanel packDataHover; 
 	public static ScreenCtrlFrame screenCtrlFrame;
 	public static ShellManager shellManager;
 	public static MyConsole consoleActive;
@@ -416,10 +414,8 @@ MouseMotionListener,FocusListener {
 			browserStart = false;
 		}
 
-		// initial location of scriptFrame: bottom of 'frame' minus 'scriptBar'
-		int high = frame.getHeight();
-		scriptHover.XLoc = ControlLocation.x;
-		scriptHover.YLoc = ControlLocation.y + high - 78;
+		// scriptFrame's initial location is set on its first open, in
+		// 'ScriptBundle.swapScriptBar', relative to 'frame's location then.
 		vertScriptBar.scriptTools.add(scriptHover.scriptToolHandler.toolBar);
 		frame.setVisible(false);
 		resetDisplay(-1.0);
@@ -907,15 +903,12 @@ MouseMotionListener,FocusListener {
 		ourBar.add(button);
 		
 		button = new JButton("Pack Info");
-		// Instantiate TabbedPackDataHover around its parent component.
-		packDataHover = new TabbedPackDataHover(button);
+		packDataHover = new TabbedPackDataPanel();
 		button.setFont(new Font(button.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
+		button.setToolTipText("Open/raise/close the Pack Data window");
 		button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				// TODO: Might be nice to add a toggleLock() method to TabbedPackDataHover.
-				if (packDataHover.isLocked()) 
-					packDataHover.setLocked(false);
-				else packDataHover.setLocked(true);
+				packDataHover.toggleShow();
 			}
 		});
 		ourBar.add(button);
@@ -958,7 +951,11 @@ MouseMotionListener,FocusListener {
 		owlProg.setPreferredSize(new Dimension(24,24));
 		owlProg.setToolTipText("Progress bar to show when busy");
 		ourBar.add(owlProg);
-		
+
+		// emergency-stop button; hidden until a computation has been
+		// running for a while (see 'OwlSpinner.STOP_BUTTON_DELAY_MS')
+		ourBar.add(((OwlSpinner)runSpinner).getStopButton());
+
 		return ourBar;
 		
 	}

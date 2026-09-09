@@ -122,6 +122,7 @@ import random.RandomTriangulation;
 import rePack.EuclPacker;
 import rePack.GORandom;
 import rePack.HypPacker;
+import rePack.OrthoPack;
 import rePack.RePacker;
 import rePack.SphPacker;
 import schwarzWork.SchwarzMap;
@@ -981,10 +982,8 @@ public class CommandStrParser {
 					  }
 				  }
 				  else if (windStr.startsWith("scr")) {
-					  if (PackControl.scriptHover.isLocked()) {
-						  PackControl.scriptHover.loadHover();
-						  PackControl.scriptHover.lockedFrame.setVisible(false);
-					  }
+					  if (PackControl.scriptHover.scriptFrame.isVisible())
+						  PackControl.scriptHover.closeScript();
 				  }
 				  else if (windStr.startsWith("fun")) {
 					  PackControl.newftnFrame.setVisible(false);
@@ -1005,7 +1004,7 @@ public class CommandStrParser {
 					  PackControl.helpFrame.setVisible(false);
 				  }
 				  else if (windStr.startsWith("inf")) { // info frame
-					  PackControl.packDataHover.setLocked(false);
+					  PackControl.packDataHover.dataFrame.setVisible(false);
 				  }
 				  // TODO: suspend until browser is fixed
 //				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
@@ -1868,6 +1867,17 @@ public class CommandStrParser {
 	    			  returnVal=1;
 		    	  }
 	    	  }
+	    	  else if (str.equalsIgnoreCase("op")) {
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
+	    		  OrthoPack op=new OrthoPack(packData);
+	    		  if (op.running) {
+		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
+		    				  ": started "+op.extensionAbbrev+" extender");
+	    			  op.StartUpMsg();
+	    			  returnVal=1;
+		    	  }
+	    	  }
 	    	  else if (str.equalsIgnoreCase("cs")) {
 	    		  if (!packData.status || packData.nodeCount==0) 
 	    			  return 0;
@@ -2615,8 +2625,15 @@ public class CommandStrParser {
 	  } // end of 'n' and 'N'
 	  case 'o':
 	  {
+		  // ========== orthoPack =======
+		  if (cmd.startsWith("ortho")) {
+			  OrthoPack orthoPack=new OrthoPack(packData);
+			  jexecute(packData,"disp -w -c -e b -u");
+			  CirclePack.cpb.msg("Ortho error is "+orthoPack.avg_error);
+		  }
+		  
 		  // ========== open ===========
-		  if (cmd.startsWith("open") && CPBase.GUImode!=0) {
+		  else if (cmd.startsWith("open") && CPBase.GUImode!=0) {
 			  // default to 'active' 
 			  if (items==null || items.size()==0) {
 				  PackControl.mapCanvasAction(true);
@@ -2644,8 +2661,9 @@ public class CommandStrParser {
 					  PackControl.helpFrame.setVisible(true);
 				  }
 				  else if (windStr.startsWith("inf")) { // info frame
-					  PackControl.packDataHover.setLocked(true);
-					  PackControl.packDataHover.setState(Frame.NORMAL);
+					  PackControl.packDataHover.dataFrame.setVisible(true);
+					  PackControl.packDataHover.dataFrame.setState(Frame.NORMAL);
+					  PackControl.packDataHover.dataFrame.toFront();
 				  }
 				  else if (windStr.startsWith("scre")) { // Screen frame; must preceed 'scr'
 					  PackControl.screenCtrlFrame.setTab(1); // show screen shots
@@ -2671,13 +2689,13 @@ public class CommandStrParser {
 				  }
 				  else if (windStr.startsWith("scr")) {
 					  // if iconified, bring it up
-					  if (PackControl.scriptHover.isLocked() && 
-							  PackControl.scriptHover.lockedFrame.getState() == JFrame.ICONIFIED)
-						  PackControl.scriptHover.lockedFrame.setState(Frame.NORMAL);
-					  else {
-						  PackControl.scriptHover.lockframe();
-						  PackControl.scriptHover.locked = true;
+					  if (PackControl.scriptHover.scriptFrame.isVisible() &&
+							  PackControl.scriptHover.scriptFrame.getState() == JFrame.ICONIFIED) {
+						  PackControl.scriptHover.scriptFrame.setState(Frame.NORMAL);
+						  PackControl.scriptHover.scriptFrame.toFront();
 					  }
+					  else
+						  PackControl.scriptHover.openScript();
 				  }
 				  else if (windStr.startsWith("fun")) {
 					  PackControl.newftnFrame.setVisible(true);

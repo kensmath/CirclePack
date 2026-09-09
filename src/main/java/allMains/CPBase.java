@@ -11,6 +11,7 @@ import java.net.URL;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.cef.CefApp;
 
@@ -106,6 +107,31 @@ public abstract class CPBase {
 	public static File XinfoFile = null; // hold help info for 'PackExtender's
 	public static CPTimer cpTimer; // for crude timings
 	public static RunProgress runSpinner;  // progress indicator
+
+	// Emergency-stop signal for long-running computations. Set by
+	// 'input.TrafficCenter.emergencyStop()' when the user presses the
+	// stop-sign button that 'images.OwlSpinner' displays next to the
+	// spinner once a computation has been running for a while, and
+	// cleared again before each new top-level command starts. A single
+	// shared flag is enough since, from the interactive console, only
+	// one computation is really running at a time.
+	//
+	// 'checkCancel()' below is meant to be called from inside the
+	// "hot loops" of packing computations (e.g. the riffle loops in
+	// 'rePack.EuclPacker'/'HypPacker') -- once per outer pass, NOT once
+	// per vertex/edge, so the added cost is a single volatile read per
+	// pass rather than per-element. NOTE: this can only take effect
+	// when Java code actually runs the check; if the active computation
+	// is inside the native GOPack JNI library at the moment of the
+	// click, the JVM cannot interrupt it, and the stop only takes
+	// effect once control returns to Java (e.g. after that native call
+	// returns).
+	public static final AtomicBoolean cancelRequested = new AtomicBoolean(false);
+
+	public static void checkCancel() {
+		if (cancelRequested.get())
+			throw new exceptions.PackingCancelledException();
+	}
 	public static String IMG="jpg"; // extension for screen shot images
 	public static File ScriptList; // html file, see 'ScriptLister.java'  
 	

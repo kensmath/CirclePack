@@ -38,8 +38,7 @@ These are things to work on for release of CirclePack java version ???:
   order the a b c by size? 
 
 * Future possibilities for migration: GraphML is widely accepted XML format for 
-  graphs. Netbeans has nice GUI builder. "dcel" structure for cell decompositions;
-  "doubly connected edge list" structure is efficient. "cgal" algorithms for 
+  graphs. Netbeans has nice GUI builder. "cgal" algorithms for 
   line arrangements.
   
 * Need way to save the dual cell decomposition to a file as a tiling.
@@ -68,9 +67,6 @@ These are things to work on for release of CirclePack java version ???:
 * On startup CPFlipper.jnlp doesn't show the tools on the left
   of the active canvas.
   
-* Create routines to represent circles in the Lorentz space form.
-  E.g., so we can apply Mobius transformations to them. 
-  
 * In the 'create' command, those methods that generate based on
   tilings should generate the 'tile' data information (though I
   don't recall right now what that is: see 'ConformalTiling'.)
@@ -85,26 +81,10 @@ These are things to work on for release of CirclePack java version ???:
   * ?vert doesn't do anything.
   * Should have "side pair" section showing corners, colors, pairings, etc.
 
-* Popup of images in www frame needs another check to make sure mouse
-  is still in the window. See 'PreviewImageHyperlinkListener'; need to
-  pass the window, perhaps, and check that before viewing. Problem: it
-  is running in another thread.
-
 * Need "browse" button for finding Tag image in script header editing.
-
-* what happened to the "scale_rad" command? is it part of some other 
-  command? 
-
-* may want to use new 'zlist' 'Zlink' lists of points in place of old
-  methods for paths.
 
 * catch up/down arrow to increase/decrease radii.
 
-* need new code to read FLOWERS: for tiling in 'readPack'. The petals are
-  vertex indices (not tile indices), so after reading in, have to process
-  to build the flowers of the vertices before calling 'barycentric' to
-  create the packing.
-  
 * script menus are 'boxmenu's, set to edit or show; created in, e.g.,
 'cmdActionPopup' in 'CmdSBox.java'.
 
@@ -173,11 +153,6 @@ These are things to work on for release of CirclePack java version ???:
   triangulations. Should read flowers in as usual, then identify faces
   that are not triangles and add bary centers.
 
-* New problem (related, perhaps to others involving menus): In bringing
-  up menu on thumbnail in screen frame, often accidentally print an
-  earlier image. Seems that some mouse click or move has been waiting for
-  completion and the user accidentally triggers it. 
- 
 * Not painting border of choosebox green when loading script (successfully) from web.
 
 * Change formatting of examples in CmdDetails.html: table format isn't 
@@ -209,9 +184,6 @@ These are things to work on for release of CirclePack java version ???:
 
 * Need "temp" vlist, elist, flist that lives only during a given
   sequence of commands.
-  
-* When a script read failed, seemed to get locked out of trying
-  another read.
 
 * Message window isn't updated when CirclePack first starts. Should have
   one message at beginning if 'HeavyC' is not available. 
@@ -262,10 +234,6 @@ These are things to work on for release of CirclePack java version ???:
 
 * Should have a 'ping' command to show CirclePack is running, e.g. on a socket.
 
-* I used the GUI builder 'Jigloo' at one time: the only places it
-  seems to remain are: OutPanel.java and WritePackPanel.java. It
-  probably should be removed from these as well.
-
 * Consider allowing circles of radius 0 (in all geometries): what
   are the implications? may need to modify layout procedures, e.g., to
   avoid degenerate face, may need to prevent contiguous zero radii,
@@ -297,22 +265,6 @@ These are things to work on for release of CirclePack java version ???:
 * Writing to script via the "save" dialog box should not use a chooser;
   put in a text area.
  
-* 64-bit library problems: here's what libHeavyC seems to want: Also need
-  the 64-bit dll's.
-
- markov:~/workspace/CirclePack/JavaCode/cdeps/libs> ldd libHeavyC_lib-x86_64.so 
-        linux-vdso.so.1 =>  (0x00007fffb91ff000)
-        libqhull.so => not found
-        libumfpack.so => not found
-        libamd.so => not found
-        libCPIbase.so => not found
-        libstdc++.so.6 => /usr/lib64/libstdc++.so.6 (0x0000000000267000)
-        libm.so.6 => /lib64/libm.so.6 (0x0000000000567000)
-        libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00000000007ea000)
-        libc.so.6 => /lib64/libc.so.6 (0x00000000009f8000)
-        /lib64/ld-linux-x86-64.so.2 (0x0000003e54600000)
- 
-
 * Frames like "Screen" should come up closer to button so they aren't
   covered if you stray into main window.
   
