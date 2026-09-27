@@ -91,7 +91,7 @@ public class CPMultiServer extends Thread {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 					System.err.println("Seemed to be no free port");
-					System.exit(1);
+					return;
 				}
 			}
 
