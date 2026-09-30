@@ -46,7 +46,8 @@ public class CircleSimple{
 	}
 	
 	/**
-	 * Create empty CircleSimple; ok true, set 'flag=0' (OK); else 'flag=-1', error.
+	 * Create empty CircleSimple; ok true, set 
+	 * 'flag=0' (OK); else 'flag=-1', error.
 	 * @param ok boolean
 	 */
 	public CircleSimple(boolean ok) {

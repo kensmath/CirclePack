@@ -30,11 +30,6 @@ package JNI;
 public final class GOPackNative {
 
     static {
-        // CirclePack bundles the native library inside its own jar (see
-        // NativeLib's Javadoc) rather than placing it on java.library.path,
-        // so plain System.loadLibrary(name) -- correct for GOPack-cpp's own
-        // standalone test harness -- won't find it here. Extract-then-load
-        // from the jar instead.
         NativeLib.ensureLoaded("gopack_jni");
     }
 
@@ -119,6 +114,55 @@ public final class GOPackNative {
      *         array lengths, no interior vertex, etc.).
      */
     public static native double[][] computeMaximalPackingFromComplex(
+            int nodeCount, int[][] flowers, int geometry, double tolerance, int maxPasses)
+            throws GOPackException;
+
+    /**
+     * Orthopack (mode 4) counterpart to {@link #computeMaximalPackingFromComplex}:
+     * loads a triangulation already held in memory (same {@code flowers}/
+     * {@code geometry} convention as that method), then instead of
+     * maximal-packing mode, sets orthopack mode via {@code
+     * gopack::Packer::setMode(4)} before riffling -- a euclidean packing
+     * whose boundary circles are each orthogonal to the unit circle, rather
+     * than mode 1's horocycles (internally tangent to it). See {@code
+     * setOrthoCenters}'s doc comment in {@code core/include/gopack/Packer.h}
+     * for the boundary-layout math this uses; unlike mode 1/2, mode 4 has no
+     * MATLAB counterpart -- it's new to this port.
+     *
+     * <p>Takes no extra parameters beyond {@link #computeMaximalPackingFromComplex}'s
+     * own -- unlike {@link #computePolygonalPackingFromComplex}'s {@code
+     * corners}/{@code angles}, orthopack (like mode 1) has no notion of
+     * corners.
+     *
+     * <p>Requires the loaded complex to triangulate a disc (a nonempty
+     * boundary); a closed/spherical complex throws {@link GOPackException}.
+     * Like mode 2, entering mode 4 always resets the packing's internal
+     * geometry to Euclidean, regardless of the {@code geometry} passed in
+     * here -- the orthogonal-to-the-unit-circle boundary condition is
+     * inherently euclidean.
+     *
+     * @param nodeCount number of vertices in the complex
+     * @param flowers   same convention as {@link #computeMaximalPackingFromComplex}
+     * @param geometry  0 = Euclidean, -1 = Hyperbolic, +1 = Spherical --
+     *                  accepted for consistency with the other bridges, but
+     *                  see the note above: mode 4 always ends up Euclidean
+     *                  regardless
+     * @param tolerance reserved for future use (currently ignored -- the
+     *                  port uses GOPack's fixed 0.01 visual-error cutoff);
+     *                  pass 0.0
+     * @param maxPasses upper bound on riffle passes (pass &lt;= 0 to use the
+     *                  native default of 200)
+     * @return a 3-row {@code double[][]}, each row length {@code
+     *         nodeCount+1} (1-indexed, index 0 unused), same shape and same
+     *         <b>must stay {@code double[][]}</b> caveat as {@link
+     *         #computeMaximalPackingFromComplex} (see that method's doc
+     *         comment): {@code result[0]} radii, {@code result[1]} center
+     *         real parts, {@code result[2]} center imaginary parts. Throws
+     *         {@link GOPackException} if the native call fails (e.g. a
+     *         malformed complex, or a complex that doesn't triangulate a
+     *         disc).
+     */
+    public static native double[][] computeOrthopackFromComplex(
             int nodeCount, int[][] flowers, int geometry, double tolerance, int maxPasses)
             throws GOPackException;
 

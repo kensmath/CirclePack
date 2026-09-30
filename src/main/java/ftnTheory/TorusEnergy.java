@@ -202,7 +202,7 @@ public class TorusEnergy extends PackExtender {
 	 */
 	public int reset(boolean flag) {
 //		packData.setCombinatorics(); // do we need this?
-		extenderPD.repack_call(1000,true,false); // use oldreliable
+		extenderPD.repack_call(1000,true); // use oldreliable
 		normalize();
 		cpCommand(extenderPD,"color -c d");
 		energy=getEnergy(extenderPD);
@@ -281,7 +281,7 @@ public class TorusEnergy extends PackExtender {
 			tmpPack=null;
 			return -1.0;
 		}
-		tmpPack.repack_call(1000,true,false); // use oldreliable
+		tmpPack.repack_call(1000,true); // use oldreliable
 //		tmpPack.fillcurves(); 
 //		try {
 //			tmpPack.comp_pack_centers(false,false,2,.0000001);

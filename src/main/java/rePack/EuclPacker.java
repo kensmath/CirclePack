@@ -32,6 +32,10 @@ public class EuclPacker extends RePacker {
     // Constructors
     public EuclPacker(PackData pd,int pass_limit) { 
     	p=pd;
+    	if (p.hes!=0) {
+			  p.geom_to_e();
+			  p.setGeometry(0);
+    	}
     	pdcel=p.packDCEL;
 		oldReliable=false;
     	if (pass_limit<0) 
@@ -115,30 +119,30 @@ public class EuclPacker extends RePacker {
     	}
     	p.fillcurves();
     }
-    
- 
         
     public int reStartRiffle(int passes) {    // continue the packing computation
     	return 1;
     }
     
-    /** Compute radii of packing to meet angle_sum targets, specified as
-     * "aims". A negative "aim" means that that circle should not have its
-     * radius adjusted. aim of zero is possible only for boundary
-     * circles in hyp setting.
+    /** Compute radii of packing to meet angle_sum targets, 
+     * specified as "aims". A negative "aim" means that 
+     * that circle should not have its radius adjusted. 
+     * Zero aim is possible only for boundary circles in 
+     * the hyp setting.
      * 
-     * All routines are iterative, inspired by routine suggested
-     * by Thurston. In hyperbolic case, we use 'x-radii', see
-     * description elsewhere. If h is infinite, store eucl radius with
-     * negative value for use in graphing its horocycle.
+     * All routines are iterative, inspired by routine 
+     * suggested by Thurston. In hyperbolic case, we use 
+     * 'x-radii', see description elsewhere. If h is 
+     * infinite, store eucl radius with negative value 
+     * for use in graphing its horocycle.
      * 
-     * Overlap angles specified > Pi/2 can lead to incompatibilities. To
-     * avoid domain errors, routines computing angles in such cases return
-     * angle Math.PI 
+     * Overlap angles specified > Pi/2 can lead to 
+     * incompatibilities. To avoid domain errors, routines 
+     * computing angles in such cases return angle Math.PI 
      */
     
-    /* Added arguments are positional: if omitted, they take default values 
-       as given in the header. Namely,
+    /* Added arguments are positional: if omitted, they 
+     * take default values as given in the header. Namely,
        
        passNo = PASS_FIRST | PASS_MIDDLE | PASS_LAST
        cutp = null
@@ -514,15 +518,16 @@ public class EuclPacker extends RePacker {
     }
     
 	/**
-	 * Affine repacking uses the "old reliable" iterative routines,
-	 * but works face-by-face and only in the eucl setting. The
-	 * radii are in 'PackDCEL.triData'. Only the ratios of radii within 
-	 * each face are important. In the typical process (as with affine 
-	 * tori), all radii are set to a constant; then selected radii 
-	 * in selected faces (e.g., outer radii of red edges) are 
-	 * reset (e.g., with side-pair scalings in the torus case). 
-	 * This must be set by calling routine, which also carries
-	 * out layout and normalization after the radii are found.
+	 * Affine repacking uses "old reliable" iterative routines,
+	 * but works face-by-face and only in the eucl setting. 
+	 * The radii are in 'PackDCEL.triData'. Only the ratios 
+	 * of radii within each face are important. In the typical 
+	 * process (as with affine tori), all radii are set to a 
+	 * constant; then selected radii in selected faces 
+	 * (e.g., outer radii of red edges) are reset (e.g., 
+	 * with side-pair scalings in the torus case). This must 
+	 * be set by calling routine, which also carries out 
+	 * layout and normalization after the radii are found.
 	 * 
 	 * This repacking procedure computes angle sums face-by-face
 	 * using 'PackDCEL.triData', where data such as radii, inv
@@ -600,12 +605,14 @@ public class EuclPacker extends RePacker {
      * Pack as euclidean to form a polygon with 
      * equal corner angles. Normalize so the edge 
      * from first to second corners is horizontal 
-     * (right to left).
+     * (right to left). If useC is false, use 
+     * oldReliable.
      * @param p PackData, 
      * @param crns NodeLink
+     * @param useC boolean
      * @return
      */
-    public static int polyPack(PackData p,NodeLink crns,boolean okayC) {
+    public static int polyPack(PackData p,NodeLink crns,boolean useC) {
     	int n=crns.size();
     	for (int i=0;i<n;i++) {
     		if (!p.isBdry(crns.get(i)))
@@ -622,7 +629,7 @@ public class EuclPacker extends RePacker {
   	  	// 4-corner (rectangle) case is wired up so far -- 
   	  	// see POLYGON_JNI_HANDOFF.md for why arbitrary
 		// polygons are held off for now.
-		if (okayC && n==4 && p.nodeCount>=GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
+		if (n==4 && p.nodeCount>=GOPACK_THRESHOLD && CPBase.gopackAvailable()) {
 			try {
 				int[][] bouquet=p.getBouquet();
 				int[] corners=new int[n];
@@ -998,4 +1005,48 @@ public class EuclPacker extends RePacker {
 			return ((1.0/del)-1.0)/((1.0/bet)-1.0);
 	}
 
+
+	
+	/** 
+	 * Fill ArrayList with errors at bdry vertices:
+	 * the error at v is (x/c-1.0)/rad, where 
+	 * c=center.abs(), x=sqrt(rad^2+1). (x is the 
+	 * distance the center should be for this radius if 
+	 * orthogonal). 
+	 * @param pd PackData
+	 * @param blink NodeLink
+	 * @return ArrayList<Double>
+	 */
+	public static ArrayList<Double> bdryErrors(PackData pd,NodeLink blink) {
+		ArrayList<Double>berrors=new ArrayList<Double>(blink.size());
+		int N=blink.size();
+		for (int j=0;j<N;j++) {
+			int v=blink.get(j);
+			Vertex vert=pd.packDCEL.vertices[v];
+			double c=vert.center.abs();
+			double x=Math.sqrt(vert.rad*vert.rad+1.0);
+			double err=(x/c-1.0)/vert.rad;
+			berrors.add(j,err);
+		}
+		return berrors;
+	}
+	
+	/**
+	 * Find average of ArrayList of absolute values of
+	 * error and max error.
+	 * @param errors
+	 * @return double[2], [0]=average, [1]=max
+	 */
+	public static double[] avg_max_error(ArrayList<Double> errors) {
+		double[] ans=new double[2];
+		int n=errors.size();
+		Iterator<Double> elst=errors.iterator();
+		while (elst.hasNext()) {
+			double err=Math.abs(elst.next());
+			ans[0]+=err;
+			ans[1]=(err>ans[1]) ? err : ans[1];
+		}
+		ans[0] = ans[0]/n;
+		return ans;
+	}
 }

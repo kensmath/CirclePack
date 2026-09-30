@@ -2438,6 +2438,18 @@ two side-pairings</opt>
 </seealso>
 </command>
 
+<command cmd="orthopack">
+<description> This applies only to packings which are
+	topological discs. It computes a euclidean packing
+	in which the boundary vertices are all orthogonal 
+	to the unit disc. This is close to a maximal packing
+	when there are no branch points, but branching is allowed.
+	When the packing has more than 500 vertices and is
+	unbranched, then the computation is carried out with
+	a call to GOPack.
+</description>
+</command> 
+
 <command cmd="outlist"> 
 <description> (Technical, now OBE) If the packing has a
 	"red chain" (mainly in multiply connected settings), this finds 

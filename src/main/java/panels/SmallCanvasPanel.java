@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
@@ -91,8 +93,37 @@ public class SmallCanvasPanel extends JPanel {
 		packName[i]=new JLabel();
 		packName[i].setFont(new Font(packName[i].getFont().toString(),Font.ITALIC,9));
 		packName[i].setText("P"+i+" empty");
-		
+
 		cpInfo[i].add(packName[i]);
+
+		// Double-clicking the title panel (or its label) makes pack 'i'
+		// active, same as double-clicking the small canvas itself
+		// (see 'CPdrawing.mouseReleased'). Attach to both the panel and
+		// the label, since a click on the label's own pixels goes to the
+		// label, not its enclosing panel.
+		TitleClickAdapter titleClick=new TitleClickAdapter(i);
+		cpInfo[i].addMouseListener(titleClick);
+		packName[i].addMouseListener(titleClick);
+	}
+
+	/**
+	 * Double click on a small canvas's title panel makes that packing
+	 * active (mirrors the double-click handling in 'CPdrawing').
+	 */
+	private class TitleClickAdapter extends MouseAdapter {
+		int packNum;
+
+		public TitleClickAdapter(int packNum) {
+			this.packNum=packNum;
+		}
+
+		public void mouseReleased(MouseEvent e) {
+			if (e.getClickCount()>=2) {
+				try {
+					PackControl.switchActivePack(packNum);
+				} catch (Exception ex) {}
+			}
+		}
 	}
 	
 	private void initGUI() {

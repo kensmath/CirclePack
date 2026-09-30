@@ -122,12 +122,12 @@ import random.RandomTriangulation;
 import rePack.EuclPacker;
 import rePack.GORandom;
 import rePack.HypPacker;
-import rePack.OrthoPack;
 import rePack.RePacker;
 import rePack.SphPacker;
 import schwarzWork.SchwarzMap;
 import schwarzWork.SchwarzPack;
 import schwarzWork.Schwarzian;
+import schwarzWork.SchwarzianSolve;
 import script.ScriptBundle;
 import tiling.TileData;
 import util.CallPacket;
@@ -1778,6 +1778,17 @@ public class CommandStrParser {
 	    			  returnVal=1;
 		    	  }
 	    	  }
+	    	  else if (str.equalsIgnoreCase("sz")) {
+	    		  if (!packData.status || packData.nodeCount==0)
+	    			  return 0;
+	    		  SchwarzianSolve px=new SchwarzianSolve(packData);
+	    		  if (px.running) {
+		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
+		    				  ": started "+px.extensionAbbrev+" extender");
+	    			  px.StartUpMsg();
+	    			  returnVal=1;
+		    	  }
+	    	  }
 	    	  else if (str.equalsIgnoreCase("tc")) {
 	    		  if (!packData.status || packData.nodeCount==0) 
 	    			  return 0;
@@ -1864,17 +1875,6 @@ public class CommandStrParser {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
 		    				  ": started "+px.extensionAbbrev+" extender");
 	    			  px.StartUpMsg();
-	    			  returnVal=1;
-		    	  }
-	    	  }
-	    	  else if (str.equalsIgnoreCase("op")) {
-	    		  if (!packData.status || packData.nodeCount==0) 
-	    			  return 0;
-	    		  OrthoPack op=new OrthoPack(packData);
-	    		  if (op.running) {
-		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
-		    				  ": started "+op.extensionAbbrev+" extender");
-	    			  op.StartUpMsg();
 	    			  returnVal=1;
 		    	  }
 	    	  }
@@ -2625,15 +2625,8 @@ public class CommandStrParser {
 	  } // end of 'n' and 'N'
 	  case 'o':
 	  {
-		  // ========== orthoPack =======
-		  if (cmd.startsWith("ortho")) {
-			  OrthoPack orthoPack=new OrthoPack(packData);
-			  jexecute(packData,"disp -w -c -e b -u");
-			  CirclePack.cpb.msg("Ortho error is "+orthoPack.avg_error);
-		  }
-		  
 		  // ========== open ===========
-		  else if (cmd.startsWith("open") && CPBase.GUImode!=0) {
+		  if (cmd.startsWith("open") && CPBase.GUImode!=0) {
 			  // default to 'active' 
 			  if (items==null || items.size()==0) {
 				  PackControl.mapCanvasAction(true);
@@ -7907,8 +7900,8 @@ public class CommandStrParser {
 	    	  }
 	    	  else 
 	    		  return 0;
-	    	  if (CirclePack.cpb!=null)
-	    		  CirclePack.cpb.msg("max_pack: "+count+" repacking cycles");
+//	    	  if (CirclePack.cpb!=null)
+//	    		  CirclePack.cpb.msg("max_pack: "+count+" repacking cycles");
 	    	  return count;
 	      }
 		  
@@ -8258,6 +8251,81 @@ public class CommandStrParser {
 	  } // end of 'n' and 'N'
 	  case 'o':
 	  {
+		  // ========= orthopack ========
+		  if (cmd.startsWith("orthop")) {
+			  if (packData.intrinsicGeom!=0 || packData.genus!=0) {
+				  CirclePack.cpb.errMsg("orthopack usage: must be topological disc");
+				  return 0;
+			  }
+			  boolean nobranch=true;
+			  for (int v=1;v<=packData.nodeCount;v++) {
+				  Vertex vert=packData.packDCEL.vertices[v];
+				  if (!vert.isBdry() && vert.aim>3.0*Math.PI) {
+					  nobranch=false;
+					  break;
+				  }
+			  }
+			  
+			  // prepare the packing
+			  CommandStrParser.jexecute(packData,"geom_to_e");
+
+			  // For large unbranched packings, hand the 
+			  // whole complex to the C++ version of GOPack:
+			  if (packData.nodeCount>=RePacker.GOPACK_THRESHOLD &&
+					  nobranch && CPBase.gopackAvailable()) {
+				  try {
+					  int[][] bouquet=packData.getBouquet();
+					  double[][] result=GOPackNative.computeOrthopackFromComplex(
+							  packData.nodeCount,bouquet,0,0.0,20); // 
+					  double[] radii=result[0];
+					  double[] centerX=result[1];
+					  double[] centerY=result[2];
+					  for (int v=1;v<=packData.nodeCount;v++) {
+						  packData.setCenter(v,new Complex(centerX[v],centerY[v]));
+						  packData.setRadius(v,radii[v]);
+					  }
+					  return 1;
+				  } catch (GOPackException gpe) {
+					  System.err.println("GOPack orthopack failed, "+
+							  "falling back to Java routine: "+gpe.getMessage());
+					  // fall through to generic repack
+				  }
+			  }
+			  
+			  NodeLink bdry=new NodeLink(packData,"b");
+			  ArrayList<Double> errArray=PackData.bdryErrors(packData,bdry);
+			  double[] am_errors=PackData.avg_max_error(errArray);
+			  int bigtick=0;
+			  while ((am_errors[0]>0.002 || am_errors[1]>0.005) && bigtick<200) {
+				  double errorin=am_errors[0];
+				  double errorout=errorin/2.0;
+				  int tick=0;
+				  while (errorout<errorin && tick<20) {
+					  errorin=am_errors[0];
+					  for (int j=0;j<bdry.size();j++) {
+						  int v=bdry.get(j);
+						  Vertex vert=packData.packDCEL.vertices[v];
+						  double rad=vert.rad;
+						  double err=errArray.get(j);
+						  double newrad=rad*(1+err*rad); // rad*(x/c)
+						  packData.setRadius(v,newrad);
+					  }
+					  CommandStrParser.jexecute(packData,"repack 1000");
+					  CommandStrParser.jexecute(packData,"layout");
+// debugging					  
+//					  CommandStrParser.jexecute(packData,"disp -wr");
+					  errArray=PackData.bdryErrors(packData,bdry);
+					  am_errors=PackData.avg_max_error(errArray);
+					  errorout=am_errors[0];
+					  tick++;
+				  } // end of one full pass
+				  bigtick++;
+				  CommandStrParser.jexecute(packData,"disp -wr");
+			} // end of overall cycles
+				
+			return bigtick;
+		  }
+		  
 	      // ========= output ===========
 	      if (cmd.startsWith("output")) {
 	    	  String filename=null;
@@ -9076,7 +9144,6 @@ public class CommandStrParser {
 	    	  
 	    	  // flags controlling the calls
 	    	  boolean oldReliable=false;
-	    	  boolean use_C=true;
 
 	    	  Iterator<Vector<String>> nextFlag=flagSegs.iterator();
 	      	  int cycles=CPBase.RIFFLE_COUNT;
@@ -9131,7 +9198,7 @@ public class CommandStrParser {
 	    			  } catch(Exception ex) { }
 	    		  }
 	    	  } // end of while
-	    	  count=packData.repack_call(cycles,oldReliable,use_C);
+	    	  count=packData.repack_call(cycles,oldReliable);
 
 			  if (count==0) {
 				  // TODO: what about errors? do they give exceptions?

@@ -3,6 +3,8 @@ package ftnTheory;
 import java.util.ArrayList;
 import java.util.Vector;
 
+import allMains.CirclePack;
+import allMains.CPBase;
 import combinatorics.komplex.DcelFace;
 import complex.Complex;
 import geometry.SphericalMath;
@@ -49,21 +51,35 @@ public class SphBranchNewton extends PackExtender {
 
 	int[] bigCircles;          // the fixed "big circle" vertices
 	int numFixed = 3;          // conformal nullity is 3 -> fix 3
+	boolean quiet = false;     // suppress per-pass perron/newton chatter (basin1 sweep)
 
 	public SphBranchNewton(PackData p) {
+		this(p, false);
+		msg("ready [build: STABLE angle-sum + analytic Jacobian, 2026-08-07]. "
+				+ "'|sn| solve' runs damped Newton from the current radii; "
+				+ "seed from a packing near a branched solution.");
+	}
+
+	/**
+	 * Embedded (non-registered) instance, for hosting the radius-space
+	 * solver inside another extender (SchwarzianSolve forwards its
+	 * radius-chapter commands here): with embedded=true this skips
+	 * registerXType(), the canvas tool, and the packExtensions
+	 * bookkeeping, so no separate '|sn|' appears on the packing.
+	 */
+	public SphBranchNewton(PackData p, boolean embedded) {
 		super(p);
 		extensionType = "SPH_BRANCH_NEWTON";
 		extensionAbbrev = "sn";
 		toolTip = "'SphBranchNewton': direct damped-Newton (Levenberg-Marquardt) "
 				+ "solve of the spherical angle-sum system";
-		registerXType();
+		if (!embedded)
+			registerXType();
 		if (extenderPD.hes <= 0)
 			errorMsg("packing is not spherical; use 'geom_to_s' first");
-		msg("ready [build: STABLE angle-sum + analytic Jacobian, 2026-08-07]. "
-				+ "'|sn| solve' runs damped Newton from the current radii; "
-				+ "seed from a packing near a branched solution.");
 		running = true;
-		extenderPD.packExtensions.add(this);
+		if (!embedded)
+			extenderPD.packExtensions.add(this);
 	}
 
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
@@ -196,6 +212,50 @@ public class SphBranchNewton extends PackExtender {
 			return newton(its[0], tl[0], null);
 		}
 
+		// ========= basin1 (sweep ONE circle's radius; watch Blaschke -> polar) =========
+		// usage:  |sn| basin1 v min max N [-r ring...] [-p pnum]
+		//   v      = the vertex whose radius is swept (e.g. 39, the doubling circle)
+		//   min max= radius range for v ;  N = number of values (step = (max-min)/N)
+		//   -r     = winding ring (default ball bearings 77..84)
+		//   -p     = seed pack number; if omitted, seed = the unbranched max-packing.
+		// The 4*pi branch aims must already be set on this packing (set_aim first).
+		if (cmd.startsWith("basin")) {
+			int v = -1, N = 10, seedPack = -1;
+			double rmin = 0.0, rmax = Math.PI / 2;
+			int[] ring = defaultBallBearings();
+			try {
+				if (flagSegs != null)
+					for (Vector<String> seg : flagSegs) {
+						if (seg.isEmpty())
+							continue;
+						String f = seg.get(0);
+						if (f.equals("-r")) {
+							ring = new int[seg.size() - 1];
+							for (int i = 1; i < seg.size(); i++)
+								ring[i - 1] = Integer.parseInt(seg.get(i));
+						} else if (f.equals("-p")) {
+							seedPack = Integer.parseInt(seg.get(1));
+						} else if (!f.startsWith("-")) { // positional: v min max N
+							v = Integer.parseInt(seg.get(0));
+							if (seg.size() > 1)
+								rmin = Double.parseDouble(seg.get(1));
+							if (seg.size() > 2)
+								rmax = Double.parseDouble(seg.get(2));
+							if (seg.size() > 3)
+								N = Integer.parseInt(seg.get(3));
+						}
+					}
+			} catch (Exception ex) {
+				errorMsg("basin1: bad args. usage: |sn| basin1 v min max N [-r ring..] [-p pnum]");
+				return 0;
+			}
+			if (v < 1) {
+				errorMsg("basin1: give the swept vertex. usage: |sn| basin1 v min max N [-r ring..] [-p pnum]");
+				return 0;
+			}
+			return basin1(v, rmin, rmax, N, ring, seedPack);
+		}
+
 		return super.cmdParser(cmd, flagSegs);
 	}
 
@@ -295,7 +355,8 @@ public class SphBranchNewton extends PackExtender {
 			errorMsg("no interior vertices with positive aim");
 			return 0;
 		}
-		msg("newton: " + n + " equations/unknowns, Levenberg-Marquardt");
+		if (!quiet)
+			msg("newton: " + n + " equations/unknowns, Levenberg-Marquardt");
 
 		// columns (radii) to HOLD FIXED (anchor): their Newton step is forced to 0,
 		// which removes conformal-nullity directions and greatly stabilizes the solve.
@@ -310,7 +371,7 @@ public class SphBranchNewton extends PackExtender {
 					nfix++;
 				}
 			}
-			if (nfix > 0)
+			if (nfix > 0 && !quiet)
 				msg("  holding " + nfix + " circle(s) fixed (anchor): " + fixedList);
 		}
 
@@ -320,7 +381,7 @@ public class SphBranchNewton extends PackExtender {
 		for (it = 1; it <= maxits; it++) {
 			double[] F = residualVector(rows);
 			normF = infNorm(F);
-			if (it <= 3 || it % 5 == 0)
+			if (!quiet && (it <= 3 || it % 5 == 0))
 				msg(String.format("  it %2d: max|F| = %.3e  (lam=%.1e)",
 						it, normF, lam));
 			if (normF < tol)
@@ -382,17 +443,20 @@ public class SphBranchNewton extends PackExtender {
 				lam *= 3.0;
 			}
 			if (!stepped) {
-				msg(String.format("  no productive step at it %d (max|F|=%.3e); "
-						+ "seed may be outside a solution basin", it, normF));
+				if (!quiet)
+					msg(String.format("  no productive step at it %d (max|F|=%.3e); "
+							+ "seed may be outside a solution basin", it, normF));
 				break;
 			}
 		}
 
 		if (normF < tol) {
-			msg(String.format("CONVERGED in %d iters, max|F| = %.3e", it, normF));
+			if (!quiet)
+				msg(String.format("CONVERGED in %d iters, max|F| = %.3e", it, normF));
 			return 1;
 		}
-		msg(String.format("did NOT converge (max|F| = %.3e)", normF));
+		if (!quiet)
+			msg(String.format("did NOT converge (max|F| = %.3e)", normF));
 		return 0;
 	}
 
@@ -447,8 +511,9 @@ public class SphBranchNewton extends PackExtender {
 			errorMsg("perron: no free vertices (container too large)");
 			return 0;
 		}
-		msg("perron: container = " + cnt + " largest circles fixed; "
-				+ free.size() + " free (Thurston fixed-boundary style)");
+		if (!quiet)
+			msg("perron: container = " + cnt + " largest circles fixed; "
+					+ free.size() + " free (Thurston fixed-boundary style)");
 
 		double tol = 1e-9, err = Double.MAX_VALUE;
 		int pass;
@@ -462,7 +527,7 @@ public class SphBranchNewton extends PackExtender {
 			for (int v : free) {
 				err = Math.max(err, Math.abs(sphAngleSum(v) - extenderPD.getAim(v)));
 			}
-			if (pass <= 3 || pass % 200 == 0)
+			if (!quiet && (pass <= 3 || pass % 200 == 0))
 				msg(String.format("  pass %d: max|F| = %.3e", pass, err));
 			if (err < tol)
 				break;
@@ -470,10 +535,11 @@ public class SphBranchNewton extends PackExtender {
 		// Perron only relaxed the FREE vertices; the fixed container no longer
 		// fits the developed packing, so a residual remains at the container
 		// circles.  Follow with 'newton' (or use 'solve') to release + polish.
-		msg(String.format("perron: developed branch structure -- free-vertex "
-				+ "residual %.2e in %d passes. Container circles are now off; "
-				+ "run '|sn| newton' (or use '|sn| solve') to polish to a solution.",
-				err, pass));
+		if (!quiet)
+			msg(String.format("perron: developed branch structure -- free-vertex "
+					+ "residual %.2e in %d passes. Container circles are now off; "
+					+ "run '|sn| newton' (or use '|sn| solve') to polish to a solution.",
+					err, pass));
 		return 1;
 	}
 
@@ -511,6 +577,159 @@ public class SphBranchNewton extends PackExtender {
 			F[i] = sphAngleSum(v) - extenderPD.getAim(v);
 		}
 		return F;
+	}
+
+	// ---------------------------------------------------------------
+	// basin1 -- sweep one circle's radius and watch the basin (Blaschke<->polar)
+	// ---------------------------------------------------------------
+
+	/**
+	 * @brief Sweep the fixed radius of vertex v over [rmin,rmax] in N steps.
+	 *
+	 * At each step: reset all radii to the seed (an unbranched max-packing, or
+	 * pack -p), pin v at the trial radius, develop with container-Perron (K=24,
+	 * container includes v), polish with Newton (only v held).  Then report
+	 *   residual = max|anglesum-aim| over the free interior vertices,
+	 *   winding  = ball-bearing winding (Blaschke 3, polar 1),
+	 *   tangency = max edge |dist(centers)-(r_a+r_b)| after layout
+	 *              (0 = a real packing; large = an angle-sum label with holonomy).
+	 * A step is a genuine solution when residual~0 AND tangency~0.  Growing v
+	 * (the doubling circle) is expected to shift the basin from Blaschke to polar.
+	 * @return 1
+	 */
+	public int basin1(int v, double rmin, double rmax, int N, int[] ring, int seedPack) {
+		if (extenderPD.hes <= 0) {
+			errorMsg("basin1: packing is not spherical (geom_to_s first)");
+			return 0;
+		}
+		int NV = extenderPD.nodeCount;
+		if (v < 1 || v > NV) {
+			errorMsg("basin1: bad vertex " + v);
+			return 0;
+		}
+		if (N < 1)
+			N = 1;
+		// capture the current (branch) aims so we can restore them
+		double[] saveAim = new double[NV + 1];
+		for (int u = 1; u <= NV; u++)
+			saveAim[u] = extenderPD.getAim(u);
+		// seed radii
+		double[] seed = new double[NV + 1];
+		if (seedPack >= 0) {
+			PackData sp = null;
+			try {
+				sp = CPBase.cpDrawing[seedPack].getPackData();
+			} catch (Exception ex) {
+				sp = null;
+			}
+			if (sp == null || sp.nodeCount != NV) {
+				errorMsg("basin1: cannot use pack p" + seedPack + " as seed (missing or wrong size)");
+				return 0;
+			}
+			for (int u = 1; u <= NV; u++)
+				seed[u] = sp.getRadius(u);
+			msg("basin1: seed = radii copied from pack p" + seedPack);
+		} else {
+			msg("basin1: no -p; computing unbranched max-packing seed (all aims 2*pi, max_pack)");
+			cpCommand("set_aim -d");     // default aims: 2*pi interior (unbranched)
+			cpCommand("max_pack");
+			cpCommand("geom_to_s");      // ensure spherical after max_pack
+			for (int u = 1; u <= NV; u++)
+				seed[u] = extenderPD.getRadius(u);
+			for (int u = 1; u <= NV; u++)
+				extenderPD.setAim(u, saveAim[u]); // restore the branch aims
+		}
+		// container = { v } U { K-1 largest seed circles }, interior only
+		int K = 24;
+		Integer[] order = new Integer[NV];
+		for (int i = 0; i < NV; i++)
+			order[i] = i + 1;
+		final double[] fseed = seed;
+		java.util.Arrays.sort(order, (a, b) -> Double.compare(fseed[b], fseed[a]));
+		ArrayList<Integer> cont = new ArrayList<Integer>();
+		cont.add(v);
+		for (int i = 0; i < NV && cont.size() < K; i++) {
+			int u = order[i];
+			if (u != v && !extenderPD.isBdry(u) && extenderPD.getAim(u) > 0)
+				cont.add(u);
+		}
+		ArrayList<Integer> holdV = new ArrayList<Integer>();
+		holdV.add(v);
+
+		msg(String.format("basin1: sweep radius of vertex %d over [%.4f, %.4f] in %d steps "
+				+ "(container K=%d incl v; winding ring |%d|). pi/2=%.4f.",
+				v, rmin, rmax, N, cont.size(), ring.length, Math.PI / 2));
+		msg(String.format("%-9s %-13s %-9s %-13s %s", "radius", "residual", "winding", "tangency", "verdict"));
+		int nfound = 0;
+		boolean saveQuiet = quiet;
+		quiet = true;                     // silence perron/newton per-pass chatter
+		for (int k = 1; k <= N; k++) {
+			double rv = rmin + k * (rmax - rmin) / N;
+			for (int u = 1; u <= NV; u++)
+				extenderPD.setRadius(u, seed[u]);
+			extenderPD.setRadius(v, rv);
+			perron(K, 2000, cont);        // develop (container incl v held)
+			newton(80, 1e-10, holdV);     // polish (only v held)
+			double res = maxResidualExcept(v);
+			cpCommand("layout");
+			double w = computeWinding(ring);
+			double tg = tangencyError();
+			String verdict;
+			if (res < 1e-7 && tg < 1e-4) {
+				long wr = Math.round(w);
+				String cls = (Math.abs(wr) == 3) ? "BLASCHKE" : (Math.abs(wr) == 1 ? "POLAR" : "winding " + wr + " (?)");
+				verdict = "SOLUTION -> " + cls;
+				nfound++;
+			} else if (res >= 1e-7)
+				verdict = "no-converge";
+			else
+				verdict = "not a packing (holonomy)";
+			msg(String.format("%-9.5f %-13.3e %-9.3f %-13.3e %s", rv, res, w, tg, verdict));
+			if (res < 1e-7 && tg < 1e-4) {
+				StringBuilder sb = new StringBuilder("   radii:");
+				for (int u = 1; u <= NV; u++)
+					sb.append(String.format(" %d=%.4f", u, extenderPD.getRadius(u)));
+				msg(sb.toString());
+			}
+		}
+		quiet = saveQuiet;
+		for (int u = 1; u <= NV; u++)
+			extenderPD.setAim(u, saveAim[u]);
+		msg("basin1: done -- " + nfound + " genuine solution(s) (residual~0 AND tangency~0). "
+				+ "Watch the winding column for the Blaschke(3) -> polar(1) shift as radius grows.");
+		return 1;
+	}
+
+	/** max |anglesum - aim| over interior vertices, EXCLUDING the pinned vertex 'skip'. */
+	double maxResidualExcept(int skip) {
+		double e = 0.0;
+		for (int v = 1; v <= extenderPD.nodeCount; v++) {
+			if (v == skip || extenderPD.isBdry(v) || extenderPD.getAim(v) <= 0)
+				continue;
+			e = Math.max(e, Math.abs(sphAngleSum(v) - extenderPD.getAim(v)));
+		}
+		return e;
+	}
+
+	/** max edge tangency error |dist(centers)-(r_a+r_b)| after a layout; 0 = a real packing. */
+	double tangencyError() {
+		int NV = extenderPD.nodeCount;
+		double e = 0.0;
+		for (int v = 1; v <= NV; v++) {
+			int[] fl = extenderPD.packDCEL.vertices[v].getFlower(false);
+			double[] cv = vec(v);
+			double rv = extenderPD.getRadius(v);
+			for (int w : fl) {
+				if (w <= v)
+					continue;
+				double[] cw = vec(w);
+				double dot = cv[0] * cw[0] + cv[1] * cw[1] + cv[2] * cw[2];
+				dot = Math.max(-1.0, Math.min(1.0, dot));
+				double d = Math.acos(dot);
+				e = Math.max(e, Math.abs(d - (rv + extenderPD.getRadius(w))));
+			}
+		}
+		return e;
 	}
 
 	// ---------------------------------------------------------------
@@ -1004,6 +1223,12 @@ public class SphBranchNewton extends PackExtender {
 		cmdStruct.add(new CmdStruct("winding", "[-L] [-r v1 v2 ...]", null,
 				"ball-bearing winding number about its own ring axis "
 						+ "(Blaschke 3, polar 1). Default ring 77..84; -L relayouts first."));
+		cmdStruct.add(new CmdStruct("basin1", "v min max N [-r ring..] [-p pnum]", null,
+				"Sweep vertex v's fixed radius over [min,max] in N steps. At each step: "
+						+ "reset to seed (unbranched max-pack, or pack -p), pin v, container-Perron "
+						+ "(K=24) then Newton, and print residual, ball-bearing winding, and layout "
+						+ "TANGENCY (0 = a real packing; large = angle-sum label with holonomy). "
+						+ "Set the 4*pi branch aims first. Watch winding shift Blaschke(3)->polar(1)."));
 	}
 
 	public void helpInfo() {

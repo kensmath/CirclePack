@@ -2336,7 +2336,7 @@ public class PackData{
 	 * @return int, 0 on error. (may reflect interations completed)
 	 */
 	public int repack_call(int passes) {
-		return repack_call(passes,false,true);
+		return repack_call(passes,false);
 	}
 
 	/**
@@ -2347,10 +2347,9 @@ public class PackData{
 	 * and so forth. Catches 'PackingException's.
 	 * @param passes int, max repack cycles
 	 * @param oldRel boolean; true, use old reliable method
-	 * @param useC boolean; true, OK to use GOPack method.
 	 * @return int, -1 on error. (may reflect iterations completed)
 	 */
-	public int repack_call(int passes, boolean oldRel, boolean useC) {
+	public int repack_call(int passes, boolean oldRel) {
 		int count = 0;
 
 		try {
@@ -2386,11 +2385,10 @@ public class PackData{
 					ans=e_packer.oldReliable(passes); 
 				if (ans>0) {
 					e_packer.reapResults();
-					fillcurves();
 					return ans;
 				}
 				else if (ans<0)
-					throw new PackingException("dcel eucl repack failure");
+					throw new PackingException("eucl repack failure");
 				return 1;
 			}
 		} catch (Exception pex) {
@@ -7189,6 +7187,50 @@ public class PackData{
 		int order=MathUtil.getOrder(vert.aim);
 		PackData p=PackCreation.seed(schvals,cs,err,order);
 		return p;
+	}
+	
+	
+	/** 
+	 * ArrayList of bdry errors, vis-a-vis orthopack:
+	 * the error at v is (x/c-1.0)/rad, where 
+	 * c=center.abs(), x=sqrt(rad^2+1). (x is the 
+	 * distance the center should be for this radius if 
+	 * orthogonal). 
+	 * @param pd PackData
+	 * @param blink NodeLink
+	 * @return ArrayList<Double>
+	 */
+	public static ArrayList<Double> bdryErrors(PackData pd,NodeLink blink) {
+		ArrayList<Double>berrors=new ArrayList<Double>(blink.size());
+		int N=blink.size();
+		for (int j=0;j<N;j++) {
+			int v=blink.get(j);
+			Vertex vert=pd.packDCEL.vertices[v];
+			double c=vert.center.abs();
+			double x=Math.sqrt(vert.rad*vert.rad+1.0);
+			double err=(x/c-1.0)/vert.rad;
+			berrors.add(j,err);
+		}
+		return berrors;
+	}
+	
+	/**
+	 * Find average of ArrayList of absolute values of
+	 * error and max error.
+	 * @param errors
+	 * @return double[2], [0]=average, [1]=max
+	 */
+	public static double[] avg_max_error(ArrayList<Double> errors) {
+		double[] ans=new double[2];
+		int n=errors.size();
+		Iterator<Double> elst=errors.iterator();
+		while (elst.hasNext()) {
+			double err=Math.abs(elst.next());
+			ans[0]+=err;
+			ans[1]=(err>ans[1]) ? err : ans[1];
+		}
+		ans[0] = ans[0]/n;
+		return ans;
 	}
 		
 } // end of 'PackData' class

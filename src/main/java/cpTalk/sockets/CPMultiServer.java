@@ -1,8 +1,9 @@
 package cpTalk.sockets;
 
 /**
- * A socketServer for CirclePack which should allow multiple clients
- * to initiate socket connections, setting up each with its own thread.
+ * A socketServer for CirclePack which should allow 
+ * multiple clients to initiate socket connections, 
+ * setting up each with its own thread.
  */
 
 import allMains.CPBase;
@@ -91,7 +92,7 @@ public class CPMultiServer extends Thread {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 					System.err.println("Seemed to be no free port");
-					System.exit(1);
+					return;
 				}
 			}
 

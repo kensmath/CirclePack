@@ -70,7 +70,8 @@ public class RawManip {
 	
 	  
 	/**
-	 * Create a new PackDCEL seed with n petals
+	 * Create a new PackDCEL seed with n petals,
+	 * center is vertex 1.
 	 * @param n int
 	 * @return PackDCEL
 	 */

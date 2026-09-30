@@ -15,22 +15,21 @@ import util.TriData;
 import util.UtilPacket;
 
 /**
- * An abstract class to manage repacking in hyperbolic, euclidean, and
- * (eventually) spherical situations. Depending on performance issues, 
- * goal is to clone initial data for computations: 
+ * An abstract class to manage repacking in hyperbolic, 
+ * euclidean, and (eventually) spherical situations. 
+ * Depending on performance issues, goal is to clone 
+ * initial data for computations: 
  *  (1) allows the machine to run in a separate thread 
- *  (2) allows original centers/radii to be retained in case of failure. 
+ *  (2) allows original cent/rad to be retained as backup
  *  (3) allows interruption and restarting of computations. 
  * 
  * Typically, 'RePack' objects are released after the computation. 
- * However, may be able to keep it as long as we check that combinatorics
- * don't change. 
+ * However, may be able to keep it as long as we check that 
+ * combinatorics don't change. 
  * 
- * NOTE: as of 3/2022, I've pulled the attempts to use calls to C
- * programs. In particular, we as yet have no way to call Orick's 
- * GOPack algorithm (though it is implemented in matlab). When this
- * is available, we will need criteria/options for using it in place
- * of current java code. 
+ * NOTE: as of 8/2026, gopack methods are available, so for
+ * larger max/rectangular/polygonal packings this code is 
+ * not called.
  * 
  * @author kens
  */
@@ -56,7 +55,7 @@ public abstract class RePacker {
 	public static int PASSLIMIT=2000;    // default upper bound, may be changed
 	
 	public PackData p;      // parent packing
-	public PackDCEL pdcel;  // prepare for DCEL version
+	public PackDCEL pdcel; 
 	
 	// create combo info to easily access triData
 	public int[] vNum;        // facecount for each vertex
@@ -133,11 +132,12 @@ public abstract class RePacker {
 	public abstract int load(); // load initial data into local storage
 	
 	/**
-     * Start a repacking if status is LOADED; uses super-steps, uniform neighbor model.
-     * This gets things set up, status to RIFFLE, followed by 'continurRiffle'.
-     * CRC - modified 8/5/02 from h_riffle:
+     * Start a repacking if status is LOADED; uses super-steps, 
+     * uniform neighbor model. This gets things set up, status 
+     * to RIFFLE, followed by 'continurRiffle'.
      * anglesum calculations are in-line. 
-     * NOTE: global 'totalPasses' is reset from within this routine
+     * NOTE: global 'totalPasses' is reset from within this 
+     * routine.
      * @return count of local repack cycles
      * @throws PackingException
      */
@@ -178,13 +178,10 @@ public abstract class RePacker {
 	 * Generic 'repack' call is for the (now) classical 
 	 * "riffle" methods, typically with supersteps, etc. 
 	 * 
-	 * TODO: may want to reimplement in C library, could be part 
-	 * of standalone code (and might be faster??).
-	 * 
 	 * On success, reap resulting radii; normally centers 
 	 * are computed in a separate call at user's discretion. 
 	 * 
-	 * Alternate methods: Orick's method and using GOpack 
+	 * Alternate methods: Orick's method gopack is used
 	 * for max packings and some polygonal packings (this
 	 * method by nature also computes centers); also 
 	 * 'oldReliable' is used, e.g., when there are 
@@ -197,36 +194,9 @@ public abstract class RePacker {
 	public int genericRePack(int pass_limit) throws PackingException {
 		
 		passLimit=pass_limit;
-
-		/* OBE: as of 2015, have retired the old HeavyC 
-		 * stuff
-		 * 
-		// use sparse matrix riffle methods of SolverFunction if requested and OK (see 'setSparseC')
-		// TODO: having some problem with this for hyperbolic packings: crash with
-		//       various error message, e.g. 'WData'; don't know source. 
-		if (useSparseC) {
-			PackLite pLite=new PackLite(p);
-			if (HeavyC.putLite(pLite.counts, pLite.varIndices, pLite.origIndices, 
-					pLite.radii,pLite.aimIndices,pLite.aims,pLite.invDistEdges,
-					pLite.invDistances,pLite.centerRe,pLite.centerIm)==0) {
-				throw new JNIException("C call to 'putLite' failed in hyp 'maxPackC'");
-			}
-
-			// This is the original C version of the riffle methods.
-			if (HeavyC.genericRePack(passLimit,p.nodeCount)<=0.0) 
-				throw new PackingException("Hyperbolic 'maxPackC' call failed");
-			
-			// capture the radii: this is euclidean data
-			double []radii=HeavyC.sendRadii(p.nodeCount,1);
-			for (int v=1;v<=p.nodeCount;v++) {
-				p.rData[v].rad=radii[v];
-			}
-			p.fillcurves();
-			return 1;		
-		} */
-
 		
-		// else use Java computations; should have been loaded in constructor 
+		// use Java computations; should have been loaded 
+		//    in constructor 
 		if (status!=LOADED && status!=RIFFLE) {
 			CirclePack.cpb.myErrorMsg("genericRePack: not in prepared status");
 			return 0;

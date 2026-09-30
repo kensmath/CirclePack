@@ -260,8 +260,7 @@ public class SphereLayout extends PackExtender {
 						int k = blt.next();
 						puncturedPack[b].setRadiusActual(k, 10.0);
 					}
-					int repackCount = puncturedPack[b].repack_call(cycles,false,
-							false);
+					int repackCount = puncturedPack[b].repack_call(cycles,false);
 
 					if (debug) {
 						File dir = CPFileManager.PackingDirectory;

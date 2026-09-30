@@ -13,6 +13,10 @@ import java.util.Random;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+
 import org.cef.CefApp;
 
 import com.jimrolf.functionparser.FunctionParser;
@@ -595,6 +599,79 @@ public abstract class CPBase {
 	 */
 	public void errMsg(String str) {
 		myErrorMsg(str);
+		beep();
+	}
+
+	// ==================== audible error beep ====================
+	// 'Toolkit.getDefaultToolkit().beep()' rings the OS's own system-beep
+	// sound (the "Default Beep"/"Asterisk" event in Windows' Sound
+	// settings). On Windows that can be suppressed entirely (e.g. sound
+	// scheme set to "No Sounds", or blocked by the window manager) and,
+	// even when it does play, it goes through the OS system-sound queue
+	// and can lag noticeably. Synthesizing and playing our own short tone
+	// through 'javax.sound.sampled' instead sidesteps the OS system-beep
+	// mechanism altogether, so it sounds the same and plays promptly on
+	// both Windows and macOS.
+
+	private static Clip errorBeepClip;
+
+	/**
+	 * Play a short, audible beep, e.g. to flag that an error message was
+	 * just posted. Runs on its own daemon thread so it can never delay or
+	 * block the caller (including calls from the EDT); any audio-system
+	 * problem (no audio device, line unavailable, etc.) is caught and
+	 * ignored so a sound failure can never disrupt command execution.
+	 */
+	public static void beep() {
+		Thread beepThread = new Thread("CP-errorBeep") {
+			public void run() {
+				try {
+					Clip clip = getErrorBeepClip();
+					synchronized (clip) {
+						if (clip.isRunning())
+							clip.stop();
+						clip.setFramePosition(0);
+						clip.start();
+					}
+				} catch (Exception ex) {
+					// no usable audio device/line; fail silently
+				}
+			}
+		};
+		beepThread.setDaemon(true);
+		beepThread.start();
+	}
+
+	private static synchronized Clip getErrorBeepClip() throws Exception {
+		if (errorBeepClip == null)
+			errorBeepClip = buildBeepClip();
+		return errorBeepClip;
+	}
+
+	/**
+	 * Synthesize a short beep tone as 16-bit mono PCM (no external sound
+	 * file needed) and load it into a reusable 'Clip'.
+	 */
+	private static Clip buildBeepClip() throws Exception {
+		float sampleRate = 44100f;
+		int durationMs = 140;
+		int numSamples = (int)(sampleRate*durationMs/1000.0);
+		int fadeSamples = 200; // short fade in/out avoids an audible click
+		byte[] pcm = new byte[numSamples*2]; // 16-bit, signed, little-endian, mono
+
+		double freq = 880.0; // A5: clear, but not shrill
+		for (int i=0; i<numSamples; i++) {
+			double t = i/sampleRate;
+			double env = Math.min(1.0,Math.min(i/(double)fadeSamples,(numSamples-i)/(double)fadeSamples));
+			short sample = (short)(env*Short.MAX_VALUE*0.6*Math.sin(2*Math.PI*freq*t));
+			pcm[2*i] = (byte)(sample & 0xff);
+			pcm[2*i+1] = (byte)((sample >> 8) & 0xff);
+		}
+
+		AudioFormat format = new AudioFormat(sampleRate,16,1,true,false);
+		Clip clip = AudioSystem.getClip();
+		clip.open(format,pcm,0,pcm.length);
+		return clip;
 	}
 
 	/**

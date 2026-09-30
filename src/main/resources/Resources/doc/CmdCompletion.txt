@@ -105,6 +105,7 @@ newRed [-t, {v..}]
 norm_scale [options] 
 NSpole [{N S {E} [t]} (or -a N {E} [t])] 
 open [window list] 
+orthopack 
 outlist 
 output [format] [-af] {filename} 
 overlay -q{q} {options} 
