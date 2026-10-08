@@ -2519,7 +2519,7 @@ public class PackData{
 			setRadius(v1, 0.1);
 		int ans=RawManip.enfold_raw(packDCEL,v1);
 		if (ans<=0)
-			throw new CombException("dcel enfold failed in 'enfold'");
+			throw new CombException("enfold failed");
 		packDCEL.fixDCEL(this);
 		return 1;
 	}
@@ -3243,7 +3243,7 @@ public class PackData{
   			packDCEL.redChain=null;
   			RawManip.addBary_raw(packDCEL,packDCEL.idealFaces[1].edge,false);
   		} catch(Exception ex) {
-  			throw new CombException("'proj' dcel error");
+  			throw new CombException("'proj' error");
   		}
   		packDCEL.fixDCEL(this);
 

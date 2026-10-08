@@ -19,7 +19,7 @@ import org.w3c.dom.NodeList;
 /**
  * Independent java code that creates the 'CmdDetails.html'
  * and 'CmdIndex.html' files that appear with the 'Help'
- * from from 'txt' files.
+ * button based on the 'CmdDetails.txt' text file.
  * @author ken
  */
 public class Info2HTML {

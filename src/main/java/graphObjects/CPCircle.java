@@ -23,15 +23,16 @@ import util.ColorUtil;
  * 'drawIt(boolean fill)' is main call for filled or open. 
  * Color settings in graphic context handled elsewhere.
  * 
- * Spherical data is adjusted by parent to act as though sphere is in 
- * standard orientation (i.e., looking straight down x-axis toward origin,
- * z-axis vertical).
+ * Spherical data is adjusted by parent to act as though 
+ * sphere is in standard orientation (i.e., looking 
+ * straight down x-axis toward origin, z-axis vertical).
  * 
- * NOTE: as of 12/2009, I've implemented use of 'Ellipse2D.Double'.
- * Because of a bug involving 'AffineTransform', I had to change all
- * my calls to use pixel (instead of real) data in the calls. This
- * avoids building my own lists for circles. The old code is in
- * 'CircleList.java'.
+ * NOTE: as of 12/2009, I've implemented use of 
+ * 'Ellipse2D.Double'. Because of a bug involving 
+ * 'AffineTransform', I had to change all my calls to 
+ * use pixel (instead of real) data in the calls. This
+ * avoids building my own lists for circles. The old 
+ * code is in 'CircleList.java'.
  * 
  * @author kens
  *
@@ -40,7 +41,7 @@ public class CPCircle extends Complex {
 
 	private static final double rad2deg=180.0/Math.PI;
 	
-	// Store static unit 128 point unit circle
+	// Store static 128 point unit circle
 	private static double[] sine=new double[128];
 	private static double[] cosine=new double[128];
 	static {
@@ -52,8 +53,9 @@ public class CPCircle extends Complex {
 		}
 	}
     
-    //  Thresholds for circles: set by world based on screen size; 
-    //  use number of points based on smallest threshold > radius.
+    //  Thresholds for circles: set by world based on 
+	//     screen size; use number of points based on 
+	//     smallest threshold > radius.
 	public double[] cir_sizes = new double[6]; 
 
 	// persistent
@@ -67,13 +69,14 @@ public class CPCircle extends Complex {
 
 	private int geometry; 
 
-	// parent sets colors in imageContextReal, adjusts x,y,radius, calls 
-	// drawIt() for draw or fill, etc.
+	// parent sets colors in imageContextReal, adjusts 
+	//   x,y,radius, calls drawIt() for draw or fill, etc.
 	public double x;
 	public double y;
 	public double radius;
 	
-	// drawing an arc only?  need 'start' angle, 'extent', in degrees. Null in general
+	// drawing an arc only?  need 'start' angle, 'extent', 
+	//   in degrees. Null in general. 
 	// Note: arc added, 12/2015, only used in euclidean case 
 	public Double start; // null in general
 	public Double extent; // null in general
@@ -190,7 +193,7 @@ public class CPCircle extends Complex {
 					2.0*radius*parent.pixFactor,2.0*radius*parent.pixFactor,
 					(double)start,(double)extent,arctype);
 			// TODO: might try "area" in Graphics2D.
-			if (!arc.intersects(g2.getClipBounds())) {  // view test
+			if (!arc.intersects(g2.getClipBounds())) { // view test
 //				System.out.println("no hit");
 				return;
 			}
@@ -218,8 +221,9 @@ public class CPCircle extends Complex {
 		if (geometry<0) 
 			hyp2eucl();
 
-		// draw using Ellipse2D.Double for circles larger than 5 pixels in radius;
-		//   by hand with varying numbers of points for smaller circles
+		// draw using Ellipse2D.Double for circles larger 
+		//   than 5 pixels in radius; by hand with varying 
+		//   numbers of points for smaller circles
 		double visSize=radius*parent.pixFactor; // size in pixels
 		if (visSize<5) { // do by hand
 			path.reset();
@@ -257,7 +261,7 @@ public class CPCircle extends Complex {
 				parent.toPixY(y+radius),
 				2.0*radius*parent.pixFactor,2.0*radius*parent.pixFactor);
 		// TODO: might try "area" in Graphics2D.
-		if (!shape.intersects(g2.getClipBounds())) {  // view test
+		if (!shape.intersects(g2.getClipBounds())) { // view test
 //			System.out.println("no hit");
 			return;
 		}
@@ -309,8 +313,9 @@ public class CPCircle extends Complex {
 	}
 	
 	/**
-	 * Options of two colors, fill and bdry. If either is null, then
-	 * default to the current graphics context color, usually fg. 
+	 * Options of two colors, fill and bdry. If either 
+	 * is null, then default to the current graphics 
+	 * context color, usually fg. 
 	 * @param draw boolean, draw object?
 	 * @param bcolor Color, for object, may be null
 	 * @param fill boolean, fill?
@@ -321,8 +326,9 @@ public class CPCircle extends Complex {
 	}
 	
 	/**
-	 * Options of two colors, fill and bdry. If either is null, then
-	 * default to the current graphics context color, usually fg. 
+	 * Options of two colors, fill and bdry. If either 
+	 * is null, then default to the current graphics 
+	 * context color, usually fg. 
 	 * @param draw boolean, draw object?
 	 * @param bcolor Color, for object, may be null
 	 * @param fill boolean, fill?
@@ -336,8 +342,9 @@ public class CPCircle extends Complex {
 		if ((draw && bcolor!=null) || (fill && fcolor!=null))
 			origcolor=g2.getColor();
 		
-		// When 'start' is not null, want arc only (only for euclidean packing)
-		//    for drawing "sectors" of circles
+		// When 'start' is not null, want arc only (only 
+		//    for euclidean packing) for drawing "sectors" 
+		//    of circles
 		if (start!=null) {
 			if (geometry!=0)
 				return;
@@ -386,8 +393,9 @@ public class CPCircle extends Complex {
 		if (geometry<0) 
 			hyp2eucl();
 
-		// draw using Ellipse2D.Double for circles larger than 5 pixels in radius;
-		//   by hand with varying numbers of points for smaller circles
+		// draw using Ellipse2D.Double for circles larger 
+		//   than 5 pixels in radius; by hand with varying 
+		//   numbers of points for smaller circles
 		double abrad=Math.abs(radius); // in case radius is negative
 		double visSize=abrad*parent.pixFactor; // size in pixels
 		if (visSize<5) { // do by hand
@@ -544,11 +552,12 @@ public class CPCircle extends Complex {
 	}
 	
 	/**
-	 * Manage various passes through 'sphDrawOnFront'. One pass
-	 * for front and, if sphere is not opaque, one pass (with
-	 * color 'wash') for back. In each pass may involve fill
-	 * and draw operations with separate colors. Possibilities for 
-	 * (fill,col2) parameters (applying in both passes:	 
+	 * Manage various passes through 'sphDrawOnFront'. 
+	 * One pass for front and, if sphere is not opaque, 
+	 * one pass (with color 'wash') for back. In each 
+	 * pass may involve fill and draw operations with 
+	 * separate colors. Possibilities for (fill,col2) 
+	 * parameters (applying in both passes:	 
 	 *    (false,*): draw in context's color
 	 *    (true,colr): fill with col1, draw bdry in col2
 	 *    (true,null): fill with col1, don't draw bdry
@@ -563,11 +572,12 @@ public class CPCircle extends Complex {
 	}
 	
 	/**
-	 * Manage various passes through 'sphDrawOnFront'. One pass
-	 * for front and, if sphere is not opague, one pass (with
-	 * color 'wash') for back. In each pass may involve fill
-	 * and draw operations with separate colors. Possibilities for 
-	 * (fill,col2) parameters (applying in both passes:	 
+	 * Manage various passes through 'sphDrawOnFront'. 
+	 * One pass for front and, if sphere is not opague, 
+	 * one pass (with color 'wash') for back. In each 
+	 * pass may involve fill and draw operations with 
+	 * separate colors. Possibilities for (fill,col2) 
+	 * parameters (applying in both passes:	 
 	 *    (false,*): draw in context's color
 	 *    (true,colr): fill with col1, draw bdry in col2
 	 *    (true,null): fill with col1, don't draw bdry
@@ -606,7 +616,7 @@ public class CPCircle extends Complex {
 			}
 		}
 
-		// Do we need to do the back? we need to wash out the colors
+		// Do we need to do the back? need washed out colors
 		if (backtoo && m!=0) { 
 
 			// reflect in yz-plane and treat as though on front
@@ -637,8 +647,9 @@ public class CPCircle extends Complex {
 	}
 	
 	/**
-	 * Convert x,y,radius from hyp info to eucl. Note that 'radius' 
-	 * starts as an 'x-radius'; it's converted to s-radius in the computations.
+	 * Convert x,y,radius from hyp info to eucl. Note 
+	 * that 'radius'starts as an 'x-radius'; it's converted 
+	 * to s-radius in the computations. 
 	 * Recall x=1-exp(-2h)=1-s^2.
 	 */
 	public void hyp2eucl() {
@@ -674,8 +685,8 @@ public class CPCircle extends Complex {
 	}
 	
 	/**
-	 * Add circle to 'gpath', using Ellipse2D. Calling routine 
-	 * may close gpath
+	 * Add circle to 'path', using Ellipse2D. Calling 
+	 * routine may close path
 	 * @param path, Path2D.Double; new or reset, we add segments
 	 * @param z, spherical 'apparent' center (x,y) (theta,phi).
 	 * @param r, spherical radius 
@@ -688,60 +699,81 @@ public class CPCircle extends Complex {
 
 		/**
 		 * Strategy: Compute circle 3D center C on the sphere;
-		 * r is the spherical radius. (Recall that x-axis is directly 
-		 * towards the viewer, y-axis is horizontal to right, z-axis
-		 * is vertical.)
+		 * r is the spherical radius. (Recall that x-axis 
+		 * is directly towards the viewer, y-axis is 
+		 * horizontal to right, z-axis is vertical.)
 		*/
 		
+		// this converts (theta,phi) to (x,y,z) 
 		Point3D C=new Point3D(z.x,z.y);
 		
+		// if circle encloses the south pole, reflect
+		//   C in origin and replace r by Pi-r.
+		
+/*		if ((z.y+r)>Math.PI) {
+			C.x=-C.x;
+			C.y=-C.y;
+			C.z=-C.z;
+			r=Math.PI-r;
+		}
+*/
+		
 		/* Start by building ellipse in standard position:
-		 * namely, assume circle is in a vertical plane, so its
-		 * center is on the xy-plane. Let L denote the y-coord of
-		 * the center; we assume L >= 0, so vector to center lies 
-		 * in xy-plane pointing in positive y direction. We can
-		 * continue to use X as the x-coord of the center. 
-		 * (Note: conceptually, we've rotated the actual situation
-		 * around the x-axis.) (Note: L^2 = 1-X^2 = Y^2+Z^2.) */
+		 * namely, assume circle is in a vertical plane, 
+		 * so its center is on the xy-plane. Let L denote 
+		 * the y-coord of the center; we assume L >= 0, so 
+		 * vector to center lies in xy-plane pointing in 
+		 * positive y direction. We can continue to use X 
+		 * as the x-coord of the center. 
+		 * (Note: conceptually, we've rotated the actual 
+		 * situation around the x-axis.) 
+		 * (Note: L^2 = 1-X^2 = Y^2+Z^2.) 
+		 */
 		
 		double L=Math.sqrt(1-C.x*C.x);
 		 
-		 /* Our perspective on the circle is toward the origin 
-		  * from out along the ray through its center. The circle is 
-		  * parameterized (angle t=0) starting to our right (negative x 
-		  * direction) where it leaves the xy-plane. The radius of the
-		  * circle (eucl radius in its plane) is sin(r). */  
+		 /* Our perspective on the circle is toward the 
+		  * origin from out along the ray through its 
+		  * center. The circle is parameterized (angle t=0) 
+		  * starting to our right (negative x 
+		  * direction) where it leaves the xy-plane. The 
+		  * radius of the circle (eucl radius in its plane) 
+		  * is sin(r). */  
 
 		double sinr=Math.sin(r);
 		double cosr=Math.cos(r);
 		
 		/* The vector to the center is rotated by angle mu
-		 * out of the yz-plane, where sin(mu) = C.x. The circle will
-		 * fail to cross the yz-plane
-		 *    |mu| <= r; in this case, it is visible iff C.x>0
-		 *    |mu| > Pi-r; in this case, circle visible iff C.x<0,
-		 *           fill either whole hemisphere iff C.x > 0,
-		 *           annulus iff C.x < 0.
+		 * out of the yz-plane, where sin(mu) = C.x. The 
+		 * circle will fail to cross the yz-plane
+		 *  |mu| <= r; in this case, visible iff C.x>0
+		 *  |mu| > Pi-r; in this case, visible iff C.x<0,
+		 *       fill either whole hemisphere iff C.x > 0,
+		 *       annulus iff C.x < 0.
 		 * proceed to the drawing operations. */
 		
 		double mu = Math.asin(C.x); // note: |mu| <= Pi/2
 		
 		// Some quick eliminations: 
 		// ones entirely (essentially) on back
-		if (Math.abs(mu)-r >= -.00001 && C.x<0) return -1;
+		if (Math.abs(mu)-r >= -.00001 && C.x<0) 
+			return -1;
 		// large circle  
 		if (Math.abs(mu)>Math.PI-r) {
 			// on back; if not filled, return
-			if (C.x>0 && !cp) return -1;
+			if (C.x>0 && !cp) 
+				return -1;
 			if (cp) { // if filled, put unit circle in path
 				Shape sp=new Ellipse2D.Double(cpS.toPixX(-1.0),
 						cpS.toPixY(1.0),2.0*cpS.pixFactor,
 						2.0*cpS.pixFactor);
 				path.append(sp,true);
 				// center on front? done
-				if (C.x>0) return 1;
+				if (C.x>0) 
+					return 1;
 				
-				// now have to build annulus; unit circle already set
+				// now have to build annulus; unit circle 
+				//    already set
 				path.closePath(); 
 				// with circle itself, bounds annulus
 				
@@ -761,17 +793,17 @@ public class CPCircle extends Complex {
 		}
 		
 		/* For the rest, need first to build the visible arc. 
-		 *   Later will add arc of horizon, if called for, and
-		 *   then rotate to correct orientation.
-		 * The data on the ellipse (the circle as seen in perspective
-		 * by the viewer from the x-direction) is:
-		 *    height: sin(r)
-		 *    width: |sin(mu)|*sin(r)=|X|*sin(r)
-		 *    major axis (in z direction): 2*sin(r)
-		 *    minor axis (y direction): 2*|X|*sin(r)
-		 *    center: ( L*cos(r), 0) (in yz-plane) 
-		 *    lower left corner: ( L*cos(r)-width,0-height)*/
-		
+		 *   Later will add arc of horizon, if called for, 
+		 *   and then rotate to correct orientation.
+		 * The data on the ellipse (the circle as seen 
+		 *    in perspective by the viewer from the 
+		 *    x-direction) is:
+		 *       height: sin(r)
+		 *       width: |sin(mu)|*sin(r)=|X|*sin(r)
+		 *       major axis (in z direction): 2*sin(r)
+		 *       minor axis (y direction): 2*|X|*sin(r)
+		 *       center: ( L*cos(r), 0) (in yz-plane) 
+		 *       lower left corner: ( L*cos(r)-width,0-height)*/
 		double width=Math.abs(C.x)*sinr;
 		double centx=L*cosr;
 		
@@ -796,14 +828,16 @@ public class CPCircle extends Complex {
 			double t0=Math.acos(C.x*cosr/(L*sinr));
 			if (Double.isNaN(t0)) t0=0.0;
 		 
-			/* NOTE: in the java routines that draw ellipses, the SAME
-			 * angle parameter is used as with the circle; one does NOT
-			 * have to adjust the angle parameters to account for the
-			 * eccentricity of the ellipse. (It's as though the drawing
-			 * were done and then the circle is squashed to the ellipse.)
+			/* NOTE: in the java routines that draw ellipses, 
+			 * the SAME angle parameter is used as with the 
+			 * circle; one does NOT have to adjust the 
+			 * angle parameters to account for the
+			 * eccentricity of the ellipse. (It's as 
+			 * though the drawing were done and then the 
+			 * circle is squashed to the ellipse.)
 			 * 
-			 *  Arc depends on X (and all must be converted to degrees)
-			 *  but does not depend on r:
+			 * Arc depends on X (and all must be converted 
+			 * to degrees) but does not depend on r:
 			 *  (i) X = 0 (up to some error): edge-on, use straight line
 			 *    [(L*cos(r),height), (L*cos(r), -height)] */
 		 
@@ -832,12 +866,14 @@ public class CPCircle extends Complex {
 				path.append(ac,true);
 			}
 		
-			// For filled circles we have to append part of the 
-			//    horizon, properly oriented.
+			// For filled circles we have to append part of 
+			//    the horizon, properly oriented.
 			if (cp) {
 			 /*  Set c=arcsin(sin(t0)*sin(r)) (always positive);
 			 *  if r > Pi/2, set c = Pi-c;      
-			 *  Arc of horizon starts at -c and has extent 2*c.*/
+			 *  Arc of horizon starts at -c and has 
+			 *  extent 2*c.
+			 */
 				double c=rad2deg*Math.asin(Math.sin(t0)*sinr);
 				if (r>CPBase.piby2) c=180-c;
 				Shape unitarc=new Arc2D.Double(cpS.toPixX(-1.0),
@@ -847,24 +883,30 @@ public class CPCircle extends Complex {
 				path.append(unitarc,true);
 			}				
 
-			 
 			/* (7). There are several other considerations:
 			 * 
-			 *   (a). If circle is drawn for the boundary of the sphere, then
-			 *   have redraw it at end (after all drawing operations?)
+			 *   (a). If circle is drawn for the boundary 
+			 *   	of the sphere, then have redraw it at 
+			 *      end (after all drawing operations?)
 			 *   
-			 *   (b). If circle is fully on back but r >= Pi/2 and we are drawing
-			 *   a filled circle, then we have to fill whole sphere.
+			 *   (b). If circle is fully on back but 
+			 *   	r >= Pi/2 and we are drawing
+			 *   	a filled circle, then we have to fill 
+			 *   	the whole sphere.
 			 *   
-			 *   (c). If circle is fully on front but r >= Pi/2 and we are drawing
-			 *   a filled circle, then we have to color an annular region between
-			 *   the circle and the unit circle.*/
+			 *   (c). If circle is fully on front but 
+			 *   	r >= Pi/2 and we are drawing
+			 *   	a filled circle, then we have to 
+			 *   	color an annular region between
+			 *   	the circle and the unit circle.
+			 */
 
 		} // done with appending horizon
 		
-		// image has to be rotated about origin to put its center in the 
-		//   correct yz-location: in particular, rotate -alpha where 
-		//   alpha = arctan2(C.z,C.y).
+		// image has to be rotated about origin to put 
+		//   its center in the correct yz-location: 
+		//   in particular, rotate -alpha where 
+		//       alpha = arctan2(C.z,C.y).
 		AffineTransform rot=new AffineTransform();
 		double origx=cpS.toPixX(0.0);
 		double origy=cpS.toPixY(0.0);

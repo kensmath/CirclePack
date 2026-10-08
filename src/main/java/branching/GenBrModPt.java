@@ -82,14 +82,12 @@ public abstract class GenBrModPt {
 	public HalfLink layoutAddons;  // adjoined to parent layout for this branch
 	public HalfLink myHoloBorder;  // for local holonomy 
 	Mobius myHolonomy;    // Can update this after each layout
-
-	// TODO: converting to dcel structure, build temporary parallel data 
 	public HalfLink eventHorizon;  // surrounding the branch region
 	public ArrayList<Vertex> myExclusions; // vertices on/inside 'eventHorizon'
 
 	public boolean success; // false if something went wrong during construction
 	
-	PackDCEL pdc; // convenience
+	PackDCEL pdc; // convenience abbrev
 	
 	// Constructor
 	public GenBrModPt(GenModBranching gmb,int bID,double aim) {

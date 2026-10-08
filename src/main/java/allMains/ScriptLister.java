@@ -91,7 +91,6 @@ public class ScriptLister {
 		// figure out whether it is a directory 
 		if (!theDirectory.isDirectory()) {
 			System.err.println(theDirectory.toString()+" is not a directory");
-			System.exit(0);
 		}
 		
 		// set name for the html file
@@ -112,6 +111,8 @@ public class ScriptLister {
 	public File go() {
 			
 		File[] paths=theDirectory.listFiles();
+	    if (paths==null) // not a directory, or can't be read
+	        return null;
 		int n=paths.length;
 		if (n>0) {
 			cpsFiles=new ArrayList<File>();
@@ -125,9 +126,9 @@ public class ScriptLister {
 			}
 		}
 		
-		if (cpsFiles.size()==0) {
-			System.out.println(theDirectory+" contains no files");
-			System.exit(0);
+		if (cpsFiles==null || cpsFiles.size()==0) {
+		    System.out.println(theDirectory+" contains no files");
+		    return null;
 		}
 
 		// gather the contents
@@ -426,9 +427,6 @@ public class ScriptLister {
 		
 		// default directory to get files from
 		File myDirectory=new File(System.getProperty("user.dir"));
-		if (myDirectory==null)
-			System.err.println("Failed default 'myDirectory'");
-		
 		
 		// default script file name
 		String outfileName=null;
@@ -456,19 +454,21 @@ public class ScriptLister {
 						System.err.println("ScriptList failed to get 'mode'");
 					}
 				}
+			}else {
+			    myDirectory=new File(arg);
+			    if (!myDirectory.isDirectory())
+			        System.err.println(arg+" is not a directory");
 			} 
-			
-			else {
-				if ((myDirectory=new File(arg))==null)
-					System.err.println("Failed to set 'myDirectory'");
-			}
 
 		} // end of for loop
 
 		// run
 		ScriptLister obj = new ScriptLister(myDirectory,mode,outfileName);
 		File theFile=obj.go();
-		System.out.println("ScriptList file "+theFile+" has been saved");
+		if (theFile==null) 
+			System.err.println("Did not find the directory, nothing saved.");
+		else
+			System.out.println("ScriptList file "+theFile+" has been saved");
 
 	}
 

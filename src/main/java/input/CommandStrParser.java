@@ -2314,6 +2314,12 @@ public class CommandStrParser {
 	  } // end of 'k'
 	  case 'l':
 	  {
+		  // ============== listScripts =====
+		  if (cmd.startsWith("listSc")) {
+			  CirclePack.cpb.msg("'listScript' not yet implemented");
+			  return 0;
+		  }
+		  
 		  // ============== load_pack =======
 		  if (cmd.startsWith("load_pac")) {
 				File theFile;
@@ -6618,19 +6624,56 @@ public class CommandStrParser {
 			  if (flagSegs==null || flagSegs.size()==0) 
 				  return 0;
 	    	  items=flagSegs.elementAt(0); // should be one segment
-	    	  String fstr="v"; // default to listed vertices
+	    	  String fstr=""; // default to listed vertices
 	    	  if (StringUtil.isFlag(items.get(0))) 
 	    		  fstr=items.remove(0).substring(1);
 	    	  
-	    	  // Check for 'h' flag first: project edge {v,w} 
-	    	  //   forward to next (half-hex) edge {w,u}, then 
-	    	  //   flip the edge at v clockwise from {v,w}.
-	    	  //   The next edge {w,u} itself is stored in 'elist'
-	    	  //   to prepare next call.
+	    	  // one random, try up to 20 times 
+	    	  if (fstr.contentEquals("r")) { 
+	        	  Random rand=new Random();
+	        	  int safety=20;
+	        	  while (safety>0) {
+	        		  safety--;
+	        		  int v=Math.abs((
+	        				  rand.nextInt())%(packData.nodeCount))+1;
+ 	        		  // if boundary, try for next interior
+	        		  if (packData.isBdry(v)) { 
+	        			  int j=1;
+	        			  while (j<=packData.nodeCount  
+	   						  && packData.isBdry(
+	   								  (v=(v+j)%(packData.nodeCount)+1)))
+	        				  j++;
+	        			  if (packData.isBdry(v)) 
+	        				  continue; // didn't find interior vert
+	        		  }
+	        		  HalfLink spokes=packData.packDCEL.
+	        				  vertices[v].getSpokes(null);
+	        		  int num=spokes.size();
+	        		  // pick a random spoke
+	        		  HalfEdge he=spokes.get(Math.abs((rand.nextInt())%(num)));
+	        		  
+	        		  // try to flip
+	   				  if (RawManip.flipEdge_raw(packData.packDCEL,he)!=null) {
+		   				  packData.packDCEL.fixDCEL(packData);
+		   				  return 1;
+	   				  }
+	        	  } // end of while
+	        	  return 0;
+	    	  }
 
-    		  if (fstr.charAt(0)=='h') { 
-    			  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
-    			  HalfEdge he=hlink.get(0); // only one edge
+	   		  if (items.size()==0)
+	   			  return 0;
+	   		  EdgeLink origLink=new EdgeLink(packData,items);
+	   		  if (origLink==null || origLink.size()==0)
+	   			  return 0;
+
+	    	  // Check for 'h' flag first: project edge {v,w} 
+	    	  //   forward to next (half-hex) edge {w,u}, which
+	    	  //   is then stored in 'elist' to prepare next call;
+	    	  //   flip the edge at v clockwise from {v,w}.
+    		  if (fstr.length()==1 && fstr.charAt(0)=='h') { 
+    			  EdgeSimple edge=origLink.get(0);
+    			  HalfEdge he=HalfEdge.Edge2HalfEdge(pdc.vertices[edge.v],edge.w);
     			  HalfEdge[] fls=null;
     			  if (he!=null) { 
     				  fls=RawManip.flipAdvance_raw(pdc,he);
@@ -6658,99 +6701,47 @@ public class CommandStrParser {
     			  }
 	    	  } // end of 'h' flag case
 
-	    	  // for the non-'h' cases, first collect the flips
-/*	    		  // just a list of flips
-	    		  else {
-	    			  rslt=CombDCEL.flipEdgeList(pdc,hlink);
-	    			  if (rslt>0)
-	    				  pdc.fixDCEL(packData);
-	    			  return rslt;
-	    		  }
-*/	    		  
-	    	  // one random, try up to 20 times 
-	    	  if (fstr.contentEquals("r")) { 
-	        	  Random rand=new Random();
-	        	  int safety=20;
-	        	  while (safety>0) {
-	        		  int v=Math.abs((
-	        				  rand.nextInt())%(packData.nodeCount))+1;
- 	        		  // if boundary, try for next interior
-	        		  if (packData.isBdry(v)) { 
-	        			  int j=1;
-	        			  while (j<=packData.nodeCount  
-	   						  && packData.isBdry(
-	   								  (v=(v+j)%(packData.nodeCount)+1)))
-	        				  j++;
-	        			  if (packData.isBdry(v)) 
-	        				  return 0; // didn't find interior vert
-	        		  }
-	        		  HalfLink spokes=packData.packDCEL.
-	        				  vertices[v].getSpokes(null);
-	        		  int num=spokes.size();
-	        		  // pick a random spoke
-	        		  HalfEdge he=spokes.get(Math.abs((rand.nextInt())%(num)));
-	        		  
-	        		  // try to flip
-	   				  if (RawManip.flipEdge_raw(packData.packDCEL,he)!=null) {
-		   				  packData.packDCEL.fixDCEL(packData);
-		   				  return 1;
-	   				  }
-	        	  }
-	        	  return 0;
-	    	  }
 
-	    	  // For remaining cases, just build 'elink' of edges to flip, .
-	   		  EdgeLink elink=new EdgeLink();
-	   		  if (items.size()==0)
-	   			  return 0;
-	   		  EdgeLink origLink=new EdgeLink(packData,items);
-	   		  if (origLink==null || origLink.size()==0)
-	   			  return 0;
+	    	  // For remaining cases, just build 'e2flip' of edges to flip, .
+	    	  EdgeLink e2flip=new EdgeLink(packData);
 	   		  Iterator<EdgeSimple> elist=origLink.iterator();
 
-	    	  // -cc flag (deprecated -hh): for each edge, flip the next 
-	    	  //     counterclockwise edge. 
+	    	  // -cc flag (deprecated -hh): for each edge, 
+	   		  //    accumulate the counterclockwise edge. 
 	   		  // (E.g., 'half-hex' path flips, see 'hh_path')
 	    	  if (fstr.startsWith("cc") || fstr.startsWith("hh")) { 
 	    		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
 		   			  int indx=packData.nghb(edge.v,edge.w);
- 		   			  // flip cclw edge
+ 		   			  // include cclw edge for flipping
 		   			  if (indx>=0 && indx<packData.countFaces(edge.v)) {
 		   				  int w=packData.getPetal(edge.v,indx+1);
-		   				  elink.add(new EdgeSimple(edge.v,w));
+		   				  e2flip.add(new EdgeSimple(edge.v,w));
 		   			  }
 	    		  }
 	    	  }
-	    	  // flip the clockwise edge (as along half-hex paths)
+	    	  // accumulate clockwise edges (as along half-hex paths)
 	    	  else if (fstr.startsWith("cw")) { 
 	    		  int w;
 	    		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
 		   			  int indx=packData.nghb(edge.v,edge.w);
+ 		   			  // include clw edge for flipping
 		   			  if (indx==0) { // must be interior
 		   				  w=packData.getPetal(edge.v,
 		   						  packData.countFaces(edge.v)-1);
 		   			  }
 		   			  else 
 		   				  w=packData.getPetal(edge.v,indx-1);
-	   				  elink.add(new EdgeSimple(edge.v,w));
+	   				  e2flip.add(new EdgeSimple(edge.v,w));
 	    		  }
 	    	  }
-	    	  
-	    	  // reaching here, just flip edges in the list
-	    	  else { 
-	    		  if (origLink==null || origLink.size()<1) 
-	    			  return 0;
-	    		  elist=origLink.iterator();
+	    	  // else, just use given list to flip
+	    	  else
+		    	  e2flip=origLink;
 
-	    		  while (elist.hasNext()) {
-    				  elink.add((EdgeSimple)elist.next());
-	    		  }
-	    	  }  
-	    		
-	    	  // done building list, so flip
-	    	  return packData.flipList(elink);
+	    	  // done building e2flip list, so flip
+	    	  return packData.flipList(e2flip);
 	      }
 	      
 	      // ============ flat_hex =========
@@ -7007,7 +6998,7 @@ public class CommandStrParser {
 	      }
 
 	      // =========== hex_slide ==========
-		  else if (cmd.startsWith("hex_slide")) {
+		  if (cmd.startsWith("hex_slide")) {
 	    	  HalfLink edgelist=null;
 	    	  HalfEdge he=null;
 	    	  try {
@@ -7035,7 +7026,7 @@ public class CommandStrParser {
 		  
 		  
 		  // =========== hh_path =================
-		  else if (cmd.startsWith("hh_path")) {
+		  if (cmd.startsWith("hh_path")) {
 /*			    OPTIONS: (default to -b -S -x)
 		(16)    -a     append to given edgepath 
 		               (i.e., {e} is a list {e..}) 
@@ -7058,7 +7049,8 @@ public class CommandStrParser {
 			  while (its.hasNext()) {
 				  items=(Vector<String>)its.next();
 	    		  String str=(String)items.get(0);
-	    		  if (StringUtil.isFlag(str)) { // 
+	    		  if (StringUtil.isFlag(str)) { 
+	    			  items.remove(0);
 	    			  if (str.equals("-a")) // append 
 	    				  stopCon+=16;
 	    			  else if (str.equals("-b")) // bdry stop
@@ -10934,12 +10926,23 @@ public class CommandStrParser {
       {
 	      // ========= unflip ========
 	      if (cmd.startsWith("unflip")) {
-	    	  items=flagSegs.elementAt(0); // should be only one segment
-	   		  EdgeLink edgeLink=new EdgeLink(packData,items);
-	   		  if (edgeLink==null || edgeLink.size()<1) 
-	   			  return 0;
-	   		  Iterator<EdgeSimple> elist=edgeLink.iterator();
+	    	  items=flagSegs.elementAt(0); 
+	    	  if (items==null || items.size()<2)
+	    		  return 0;
+	    	  NodeLink nnlk=new NodeLink(packData,items);
+	   		  EdgeLink edgeLink=new EdgeLink(packData);
 	   		  
+	   		  // pick off pairs of indices (should not be
+	   		  //   neighbors
+	   		  Iterator<Integer> nlst=nnlk.iterator();
+   			  int u;
+   			  int v;
+	   		  while ((nlst.hasNext() && (u=nlst.next())!=0) &&
+	   				  (nlst.hasNext() && (v=nlst.next())!=0)) {
+	   			  edgeLink.add(new EdgeSimple(u,v));
+	   		  }
+	   		  
+	   		  Iterator<EdgeSimple> elist=edgeLink.iterator();
 	   		  HalfLink hlink=new HalfLink(packData);
 	   		  while (elist.hasNext()) {
 	   			  EdgeSimple edge=elist.next();

@@ -1008,7 +1008,6 @@ public class ReadWrite {
 							}
 						} // end of while
 					}
-					// TODO: have to fix this for dcel structures
 					else if (mainTok.equals("TRI_COLORS:")) { // OBE: uses color indices (see T_COLORS)
 						state = PackState.TRI_COLORS;
 						if (newPacking)
@@ -1077,7 +1076,6 @@ public class ReadWrite {
 						else
 							flags |= 020000;
 					}
-					// TODO: fix this for dcel structure
 					else if (mainTok.equals("FACE_TRIPLES:")) {
 						state = PackState.FACE_TRIPLES;
 						p.flist = new FaceLink(p);
@@ -1397,7 +1395,6 @@ public class ReadWrite {
 						}
 						state = PackState.INITIAL;
 					} // done with 'BARY_VECTOR'
-						// TODO: fix for dcel structures
 					else if (mainTok.equals("BARY_VECTOR:") && !newPacking) {
 						state = PackState.BARY_VECTOR;
 						int count = 0;

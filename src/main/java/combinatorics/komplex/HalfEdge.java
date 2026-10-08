@@ -9,11 +9,9 @@ import komplex.EdgeSimple;
 import util.ColorUtil;
 
 /** 
- * DCEL HalfEdge. Its 'face' is on its left. As we transition to a DCEL
- * core model of packings, each edge will carry an 'inversive distance',
- * 'schwarzian', and color (though these will be redundant for now). 
- * Careful, as edges are not persistent. 
- * TODO: figure out how to transfer date when edges change.
+ * DCEL HalfEdge. Its 'face' is on its left. Each edge 
+ * carries an 'inversive distance', 'schwarzian', and 
+ * color. Careful, as edges are not persistent. 
  * @author kstephe2
  *
  */
@@ -69,6 +67,24 @@ public class HalfEdge {
 		invDist=he.invDist;
 		schwarzian=he.schwarzian;
 		eutil=0;
+	}
+	
+	/**
+	 * Convert an edge to a HalfEdge
+	 * @param v Vertex
+	 * @param w int, other end
+	 * @return new HalfEdge, null on failure
+	 */
+	public static HalfEdge Edge2HalfEdge(Vertex v,int w) { // from end vertices
+		HalfEdge he=v.halfedge;
+		int ww=he.twin.origin.vertIndx;
+		do {
+			if (ww==w)
+				return he;
+			he=he.twin.next; // clw search
+			ww=he.twin.origin.vertIndx;
+		} while(he!=v.halfedge);
+		return null;
 	}
 	
 	/**

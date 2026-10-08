@@ -83,7 +83,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		super();
 		packData=p;
 		pdc=p.packDCEL; 
-		if (items==null || items.get(0).length()==0) { // default to 'a' (all edges)
+		if (items==null || items.size()==0 || items.get(0).length()==0) { // default to 'a' (all edges)
 			items=new Vector<String>(1);
 			items.add("a");
 		}

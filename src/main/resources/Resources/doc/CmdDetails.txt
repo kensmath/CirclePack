@@ -935,6 +935,8 @@ default temporary directory (see 'Messages'), others print something.
 	<opt flag="-ee {v w..}"> extended edges; travel thru up to 16 hex
 			vertices from v to w (for hex_refined packs). </opt>
 	<opt flag="-gi"> draw path and the circles inside it</opt>
+	<opt flag="-h"> draw polygons formed by the tangency points
+	        of a circle.</opt>
 	<opt flag="-nl {v} {st}"> display string "st" at center of 
 	circle v </opt>
 	<opt flag="-nz {x y} {st}"> display string "st" at location x+iy</opt>

@@ -147,9 +147,9 @@ public class SphPacker extends RePacker {
 		act=CommandStrParser.jexecute(p,"add_ideal");
 		if (act==0)
 			System.err.println("add_ideal failed");
-		CommandStrParser.jexecute(p,"copy 2");		
+//		CommandStrParser.jexecute(p,"copy 2"); // for testing??	
 
-		p.setCenter(p.nodeCount,new Complex(0.0));
+		p.setCenter(p.nodeCount,new Complex(0.0,Math.PI));
 		p.setRadius(p.nodeCount,CPBase.piby2);
 		if (swap && p.packDCEL.swapNodes(punc_vert,p.nodeCount)==0)
 			CirclePack.cpb.errMsg("Opps, failed to swap vertices back");
