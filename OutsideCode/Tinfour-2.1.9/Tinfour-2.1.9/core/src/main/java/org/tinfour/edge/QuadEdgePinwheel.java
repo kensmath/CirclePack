@@ -1,0 +1,90 @@
+/* --------------------------------------------------------------------
+ * Copyright 2016 Gary W. Lucas.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ---------------------------------------------------------------------
+ */
+
+ /*
+ * -----------------------------------------------------------------------
+ *
+ * Revision History:
+ * Date     Name         Description
+ * ------   ---------    -------------------------------------------------
+ * 11/2016  G. Lucas     Created
+ *
+ * Notes:
+ *   The idea for this implementation is due to Scott Martin.  I gratefully
+ *   acknowledge his contribution.
+ *
+ * -----------------------------------------------------------------------
+ */
+package org.tinfour.edge;
+
+import java.util.Iterator;
+import org.tinfour.common.IQuadEdge;
+
+/**
+ * Provides an implementation of the pinwheel operation
+ * via the Iterator and Iterable interfaces.
+ */
+public class QuadEdgePinwheel implements Iterable<IQuadEdge>, Iterator<IQuadEdge> {
+
+  final IQuadEdge e0;
+  IQuadEdge p;
+  boolean hasNext;
+
+  /**
+   * Constructs a pinwheel iterator based on the specified edge.
+   * The first "next" edge produced by the iterator is the edge immediately
+   * counterclockwise from edge e0.
+   * @param e0 the producing edge for the iterator.
+   */
+  public QuadEdgePinwheel(IQuadEdge e0) {
+    this.e0 = e0;
+    p = e0;
+    hasNext = true;
+  }
+
+  @Override
+  public Iterator<IQuadEdge> iterator() {
+    return this;
+  }
+
+  @Override
+  public boolean hasNext() {
+    return hasNext;
+  }
+
+  @Override
+  public IQuadEdge next() {
+    if (!hasNext) {
+      // This code will be reached only if application ignored the
+      // return value from hasNext().
+      return null;
+    }
+
+    p = p.getDualFromReverse();
+    if (p.equals(e0)) {
+      hasNext = false;
+    }
+    return p;
+  }
+
+  @Override
+  public void remove() {
+    throw new UnsupportedOperationException(
+      "Remove is not supported for IQuadEdge iterators");
+  }
+
+}

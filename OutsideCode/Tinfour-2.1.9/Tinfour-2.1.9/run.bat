@@ -1,0 +1,1 @@
+java -Xmx2000m -jar  TinfourDemo-2.0.jar

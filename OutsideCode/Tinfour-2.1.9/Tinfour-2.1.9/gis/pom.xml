@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"
+>
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.tinfour</groupId>
+    <artifactId>Tinfour</artifactId>
+    <version>2.1.9</version>
+  </parent>
+
+  <artifactId>TinfourGis</artifactId>
+  <name>Gis</name>
+  <description>Classes for accessing data from GIS sources including Shapefiles and airborne Lidar</description>
+  
+  <dependencies>
+    <dependency>
+      <groupId>com.github.mreutegg</groupId>
+      <artifactId>laszip4j</artifactId>
+      <version>0.20</version>
+    </dependency>
+
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-imaging</artifactId>
+        <version>1.0-alpha3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.tinfour</groupId>
+      <artifactId>TinfourCore</artifactId>
+    </dependency>
+  </dependencies>
+</project>
